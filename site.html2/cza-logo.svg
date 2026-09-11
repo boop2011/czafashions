@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 300" role="img" aria-labelledby="title desc">
+  <title id="title">CZA logo</title>
+  <desc id="desc">Black CZA wordmark with a horizontal crossbar</desc>
+  <rect width="760" height="300" fill="none"/>
+  <g fill="#111111" font-family="Georgia, 'Times New Roman', serif" font-size="270" font-weight="700" letter-spacing="-42">
+    <text x="68" y="225">CZA</text>
+  </g>
+  <path d="M92 156 H695" stroke="#111111" stroke-width="5"/>
+</svg>

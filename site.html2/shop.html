@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shop | CZA</title>
+    <meta name="description" content="Shop premium clothing, accessories and everyday essentials from CZA." />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="announcement-bar">Free shipping on orders over $150</div>
+
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <button class="nav-toggle" aria-label="Open menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <a href="index.html" class="brand" aria-label="CZA home"><img src="cza-logo.svg" alt="CZA" /></a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+          <a href="index.html#new-in">New In</a>
+          <a href="shop.html?category=women">Women</a>
+          <a href="shop.html?category=men">Men</a>
+          <a href="shop.html?category=accessories">Accessories</a>
+          <a href="shop.html" class="active">Shop</a>
+        </nav>
+
+        <div class="nav-actions">
+          <button class="icon-button" aria-label="Search">⌕</button>
+          <button class="icon-button bag-button" type="button" aria-label="Shopping bag">
+            Bag
+            <span class="bag-count">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="search-panel" id="search-panel" aria-hidden="true">
+      <form class="search-form" id="search-form" role="search">
+        <input id="site-search" name="site-search" type="search" placeholder="Search CZA pieces" aria-label="Search CZA pieces" />
+        <button class="btn btn-primary" type="submit">Search</button>
+        <button class="search-close" type="button" aria-label="Close search">×</button>
+      </form>
+      <p class="search-status" id="search-status"></p>
+    </div>
+
+    <main class="shop-page">
+      <section class="shop-hero container">
+        <p class="eyebrow">Curated edit</p>
+        <h1>Shop the collection</h1>
+      </section>
+
+      <section class="shop-layout container">
+        <aside class="shop-sidebar">
+          <div class="filter-group">
+            <h3>Category</h3>
+            <label><input type="checkbox" checked /> Women</label>
+            <label><input type="checkbox" checked /> Men</label>
+            <label><input type="checkbox" checked /> Accessories</label>
+          </div>
+
+          <div class="filter-group">
+            <h3>Price</h3>
+            <label><input type="radio" name="price" checked /> Under $100</label>
+            <label><input type="radio" name="price" /> $100 – $200</label>
+            <label><input type="radio" name="price" /> $200+</label>
+          </div>
+
+          <div class="filter-group">
+            <h3>Color</h3>
+            <div class="swatches">
+              <span style="background:#d9c8bb"></span>
+              <span style="background:#3a2a1d"></span>
+              <span style="background:#b7b6b2"></span>
+              <span style="background:#1c1c1c"></span>
+            </div>
+          </div>
+        </aside>
+
+        <div class="shop-content">
+          <div class="shop-toolbar">
+            <p>Showing <span id="item-count">0</span> items</p>
+            <select aria-label="Sort products">
+              <option>Featured</option>
+              <option>Price: Low to High</option>
+              <option>Price: High to Low</option>
+              <option>Newest</option>
+            </select>
+          </div>
+
+          <div class="products-grid" id="shop-products"></div>
+
+          <div id="go-to-bag-section" style="text-align: center; margin-top: 60px; padding: 40px 20px; display: none;">
+            <button id="go-to-bag-btn" style="display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, var(--primary), var(--primary-strong)); color: #fff; border: none; border-radius: 12px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.08em; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">
+              → Go to Bag
+            </button>
+            <p style="color: var(--muted); margin-top: 16px; font-size: 0.9rem;">Review your items and proceed to checkout</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="checkout-section container" id="shop-checkout-section" style="margin: 80px 0; background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240,226,210,0.3) 100%); padding: 40px; border-radius: 20px; border: 1px solid rgba(23,21,19,0.12); box-shadow: 0 4px 20px rgba(0,0,0,0.08); display: none;">
+        <div style="max-width: 900px; margin: 0 auto;">
+          <div style="margin-bottom: 40px;">
+            <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 2rem; margin-bottom: 16px;">Complete Your Order</h2>
+            <p style="color: var(--muted); font-size: 1rem;">Fill in your details below to proceed with payment via Dodo Payments</p>
+          </div>
+
+          <div id="checkout-empty-shop" class="cart-is-empty" style="text-align: center; padding: 60px 20px;">
+            <h2 style="font-family: 'Cormorant Garamond', serif; font-size: 2rem; margin-bottom: 16px;">Your bag is empty</h2>
+            <p>Add some CZA pieces before checkout</p>
+            <a href="shop.html" class="continue-shopping-btn" style="display: inline-block; margin-top: 24px; padding: 12px 28px; background: linear-gradient(135deg, var(--primary), var(--primary-strong)); color: #fff; border-radius: var(--radius-sm); text-transform: uppercase; font-weight: 600; letter-spacing: 0.08em; font-size: 0.85rem; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">Continue Shopping</a>
+          </div>
+
+          <form id="checkout-form" class="checkout-form" style="display: grid; grid-template-columns: 1fr 400px; gap: 40px;">
+            <div>
+              <!-- Billing Information -->
+              <div style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 226, 210, 0.3)); padding: 32px; border-radius: 20px; border: 1px solid var(--line); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin-bottom: 24px;">
+                <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 24px; color: var(--ink); position: relative; padding-bottom: 12px;">Billing Information<span style="content: ''; position: absolute; bottom: 0; left: 0; width: 40px; height: 2px; background: var(--gold);"></span></h3>
+                
+                <div style="margin-bottom: 20px;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; color: var(--ink-soft);">Full Name *</label>
+                  <input type="text" name="customerName" required placeholder="John Doe" style="width: 100%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 0.95rem; transition: all 0.3s ease;" />
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                  <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; color: var(--ink-soft);">Email Address *</label>
+                    <input type="email" name="customerEmail" required placeholder="you@example.com" style="width: 100%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 0.95rem;" />
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; color: var(--ink-soft);">Phone Number *</label>
+                    <div style="display: flex; gap: 8px;">
+                      <select name="countryCode" style="width: 100px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 0.95rem;">
+                        <option value="+256">+256 (UG)</option>
+                        <option value="+1">+1 (US)</option>
+                        <option value="+44">+44 (UK)</option>
+                        <option value="+33">+33 (FR)</option>
+                        <option value="+49">+49 (DE)</option>
+                        <option value="+39">+39 (IT)</option>
+                        <option value="+353">+353 (IE)</option>
+                      </select>
+                      <input type="tel" name="customerPhone" required placeholder="700123456" style="flex: 1; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 0.95rem;" />
+                    </div>
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; color: var(--ink-soft);">City/Town *</label>
+                  <input type="text" name="customerCity" required placeholder="Kampala, Nairobi, London..." style="width: 100%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 0.95rem;" />
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                  <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; color: var(--ink-soft);">Region/State *</label>
+                    <input type="text" name="customerRegion" required placeholder="Central, Western..." style="width: 100%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 0.95rem;" />
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; color: var(--ink-soft);">Country *</label>
+                    <input type="text" name="customerCountry" required placeholder="Uganda" readonly style="width: 100%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: 0.95rem; cursor: not-allowed;" />
+                    <small style="display: block; margin-top: 4px; color: var(--muted); font-size: 0.75rem;">Auto-detected from phone code</small>
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; color: var(--ink-soft);">Street Address *</label>
+                  <input type="text" name="deliveryAddress" required placeholder="Street name and number" style="width: 100%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 0.95rem;" />
+                </div>
+
+                <div style="margin-bottom: 0;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; color: var(--ink-soft);">Delivery Notes (Optional)</label>
+                  <textarea name="deliveryNotes" placeholder="e.g., Gate code, apartment number, preferred delivery time" rows="2" style="width: 100%; padding: 12px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.8); color: var(--ink); font-size: 0.95rem; font-family: inherit;"></textarea>
+                </div>
+              </div>
+
+              <!-- Payment Method -->
+              <div style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 226, 210, 0.3)); padding: 32px; border-radius: 20px; border: 1px solid var(--line); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
+                <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 24px; color: var(--ink); position: relative; padding-bottom: 12px;">Payment Method<span style="content: ''; position: absolute; bottom: 0; left: 0; width: 40px; height: 2px; background: var(--gold);"></span></h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                  <label style="display: flex; align-items: center; padding: 16px; border: 2px solid var(--gold); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; background: rgba(255, 255, 255, 0.6);">
+                    <input type="radio" name="paymentMethod" value="card" checked style="margin-right: 12px; cursor: pointer; width: 20px; height: 20px;" />
+                    <div>
+                      <strong style="display: block; margin-bottom: 4px;">💳 Card Payment</strong>
+                      <small style="color: var(--muted); display: block;">Visa, Mastercard, Amex</small>
+                    </div>
+                  </label>
+                  <label style="display: flex; align-items: center; padding: 16px; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; transition: all 0.3s ease; background: rgba(255, 255, 255, 0.6);">
+                    <input type="radio" name="paymentMethod" value="mobile_money" style="margin-right: 12px; cursor: pointer; width: 20px; height: 20px;" />
+                    <div>
+                      <strong style="display: block; margin-bottom: 4px;">📱 Mobile Money</strong>
+                      <small style="color: var(--muted); display: block;">MTN, Airtel, Equity</small>
+                    </div>
+                  </label>
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; color: var(--ink-soft);">Payment Currency</label>
+                  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                    <button type="button" class="currency-btn active" data-currency="UGX" style="padding: 12px 10px; border: 3px solid var(--gold); background: var(--gold-bright); color: #fff; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease;">UGX</button>
+                    <button type="button" class="currency-btn" data-currency="USD" style="padding: 12px 10px; border: 2px solid var(--line); background: rgba(255, 255, 255, 0.6); border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease;">USD</button>
+                    <button type="button" class="currency-btn" data-currency="EUR" style="padding: 12px 10px; border: 2px solid var(--line); background: rgba(255, 255, 255, 0.6); border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease;">EUR</button>
+                    <button type="button" class="currency-btn" data-currency="GBP" style="padding: 12px 10px; border: 2px solid var(--line); background: rgba(255, 255, 255, 0.6); border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.3s ease;">GBP</button>
+                  </div>
+                </div>
+
+                <div id="error-message" style="display: none; padding: 14px 16px; background: #fee; color: #c00; border-radius: 12px; margin-bottom: 16px; font-size: 0.9rem; border-left: 4px solid #c00;"></div>
+
+                <div class="payment-loading" id="payment-loading" style="display: none; text-align: center; padding: 30px 20px; background: rgba(217, 185, 152, 0.05); border-radius: 12px;">
+                  <div style="display: inline-block; width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;"></div>
+                  <p>Processing your payment...</p>
+                </div>
+
+                <button type="submit" class="checkout-button" id="checkout-submit" style="width: 100%; padding: 16px 24px; background: linear-gradient(135deg, var(--primary), var(--primary-strong)); color: #fff; border: none; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);">Complete Purchase</button>
+              </div>
+            </div>
+
+            <!-- Order Summary -->
+            <aside>
+              <div style="position: sticky; top: 100px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 226, 210, 0.3)); padding: 28px; border-radius: 20px; border: 1px solid var(--line); height: fit-content; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);">
+                <h3 style="font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 16px; color: var(--ink);">Your Bag</h3>
+                
+                <div class="summary-items-container" id="summary-items" style="max-height: 300px; overflow-y: auto; margin-bottom: 16px; padding-right: 8px;"></div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line);">
+                  <span>Subtotal</span>
+                  <span id="summary-subtotal">$0.00</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line);">
+                  <span>Shipping</span>
+                  <span id="summary-shipping" style="color: var(--success); font-weight: 600;">FREE</span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: none; padding-bottom: 0; margin-bottom: 0; font-weight: 600; font-size: 1.15rem; color: var(--gold);">
+                  <span>Total Amount</span>
+                  <span id="summary-total">$0.00</span>
+                </div>
+
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line);">
+                  <p style="font-size: 0.75rem; color: var(--muted); margin: 0; line-height: 1.5;">
+                    🔒 Secure payment powered by <strong>Dodo Payments</strong>. Your card information is encrypted and protected with industry-standard security.
+                  </p>
+                </div>
+              </div>
+            </aside>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <a href="index.html" class="brand"><img src="cza-logo.svg" alt="CZA" /></a>
+          <p>Seeking elevated essentials for everyday rituals.</p>
+        </div>
+
+        <div>
+          <h3>Shop</h3>
+          <ul>
+            <li><a href="shop.html">New arrivals</a></li>
+            <li><a href="shop.html?category=women">Women</a></li>
+            <li><a href="shop.html?category=men">Men</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3>About</h3>
+          <ul>
+            <li><a href="#">Our story</a></li>
+            <li><a href="#">Journal</a></li>
+            <li><a href="#">Sustainability</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3>Contact</h3>
+          <ul>
+            <li><a href="mailto:hello@cza.com">hello@cza.com</a></li>
+            <li><a href="tel:+14153309021">+1 (415) 330-9021</a></li>
+            <li><a href="#">Instagram</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="container footer-bottom">
+        <span>© <span id="year"></span> CZA</span>
+        <span>Privacy Policy</span>
+        <span>Shipping & Returns</span>
+      </div>
+    </footer>
+
+    <div class="floating-chat" id="floating-chat">
+      <button class="chat-toggle" type="button" aria-label="Open chat">Chat with CZA</button>
+      <div class="chat-window hidden" id="chat-window">
+        <div class="chat-header">
+          <strong>CZA support</strong>
+          <button type="button" class="chat-close">×</button>
+        </div>
+        <p>Need help with an order or styling advice?</p>
+        <a class="whatsapp-link" href="https://wa.me/256700000000?text=Hello%20CZA%2C%20I%20want%20to%20ask%20about%20an%20order." target="_blank" rel="noreferrer">Chat on WhatsApp</a>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" aria-live="polite"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

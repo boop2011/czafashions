@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CZA | Modern Everyday Fashion</title>
+    <meta
+      name="description"
+      content="CZA offers elevated essentials, luxury staples, and fast delivery for daily rituals."
+    />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="announcement-bar">Free shipping on orders over $150</div>
+
+    <header class="site-header">
+      <div class="container nav-wrap">
+        <button class="nav-toggle" aria-label="Open menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <a href="index.html" class="brand" aria-label="CZA home"><img src="cza-logo.svg" alt="CZA" /></a>
+
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="index.html" class="active">Home</a>
+          <a href="#new-in">New In</a>
+          <a href="shop.html?category=women">Women</a>
+          <a href="shop.html?category=men">Men</a>
+          <a href="shop.html?category=accessories">Accessories</a>
+          <a href="shop.html">Shop</a>
+        </nav>
+
+        <div class="nav-actions">
+          <button class="icon-button" aria-label="Search">⌕</button>
+          <button class="icon-button bag-button" type="button" aria-label="Shopping bag">
+            Bag
+            <span class="bag-count">0</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="search-panel" id="search-panel" aria-hidden="true">
+      <form class="search-form" id="search-form" role="search">
+        <input id="site-search" name="site-search" type="search" placeholder="Search CZA pieces" aria-label="Search CZA pieces" />
+        <button class="btn btn-primary" type="submit">Search</button>
+        <button class="search-close" type="button" aria-label="Close search">×</button>
+      </form>
+      <p class="search-status" id="search-status"></p>
+    </div>
+
+    <main>
+      <section class="hero container">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">New season / everyday luxury</p>
+            <div class="hero-wordmark"><img src="cza-logo.svg" alt="CZA" /></div>
+            <p class="lead">
+              Minimal essentials shaped for movement, comfort, and confident daily rituals.
+            </p>
+            <div class="hero-actions">
+              <a href="shop.html" class="btn btn-primary">Shop now</a>
+              <a href="#delivery" class="btn btn-secondary">Delivery info</a>
+            </div>
+            <ul class="hero-meta">
+              <li>Worldwide shipping</li>
+              <li>Easy 30-day returns</li>
+              <li>Curated essentials</li>
+            </ul>
+          </div>
+
+          <div class="hero-visual" aria-label="Featured CZA fashion editorial">
+            <div class="card card-large">
+              <img
+                src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=80"
+                alt="Model in a neutral outfit"
+              />
+            </div>
+            <div class="card card-small top">
+              <img
+                src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=700&q=80"
+                alt="Close up portrait"
+              />
+            </div>
+            <div class="card card-small bottom">
+              <img
+                src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=700&q=80"
+                alt="CZA accessories"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="brands container" aria-label="Brand list">
+        <span>ASOS</span>
+        <span>MONO</span>
+        <span>BERLINE</span>
+        <span>VANTA</span>
+        <span>ORÉ</span>
+      </section>
+
+      <section class="products-section container" id="new-in">
+        <div class="section-heading">
+          <h2>New in</h2>
+          <div class="filter-pills" aria-label="Product filters">
+            <button class="filter-btn active" type="button" data-filter="all">All</button>
+            <button class="filter-btn" type="button" data-filter="women">Women</button>
+            <button class="filter-btn" type="button" data-filter="men">Men</button>
+            <button class="filter-btn" type="button" data-filter="accessories">Accessories</button>
+          </div>
+        </div>
+
+        <div class="products-grid" id="featured-products"></div>
+      </section>
+
+      <section class="delivery-section container" id="delivery">
+        <div class="section-heading split">
+          <p class="eyebrow">Delivery & payments</p>
+          <h2>Made to move beyond borders.</h2>
+        </div>
+
+        <div class="delivery-grid">
+          <article class="delivery-card dark">
+            <span class="delivery-tag">01</span>
+            <h3>Delivery within Africa</h3>
+            <p>We ship to all 54 African countries. Express and standard options are available at checkout. Free shipping on orders above $150.</p>
+          </article>
+
+          <article class="delivery-card">
+            <span class="delivery-tag">02</span>
+            <h3>International shipping</h3>
+            <p>We deliver to 120+ countries worldwide. Tracking is provided on all international orders. Duties and taxes may apply.</p>
+          </article>
+
+          <article class="delivery-card">
+            <span class="delivery-tag">03</span>
+            <h3>Secure payments</h3>
+            <p>Pay securely with Visa, Mastercard, American Express, PayPal, Apple Pay, or Google Pay.</p>
+          </article>
+
+          <article class="delivery-card">
+            <span class="delivery-tag">04</span>
+            <h3>Tracked updates</h3>
+            <p>Every shipment includes a live tracking link and delivery notifications by email.</p>
+          </article>
+
+          <article class="delivery-card">
+            <span class="delivery-tag">05</span>
+            <h3>Easy returns</h3>
+            <p>Changed your mind? Enjoy a simple 30-day return policy on unworn, unwashed items.</p>
+          </article>
+
+          <article class="delivery-card">
+            <span class="delivery-tag">06</span>
+            <h3>Carefully packed</h3>
+            <p>Your CZA pieces arrive protected and ready to wear, with thoughtful packaging at every step.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="story container" id="women">
+        <div class="story-image">
+          <img
+            src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80"
+            alt="CZA editorial portrait"
+          />
+        </div>
+
+        <div class="story-copy">
+          <p class="eyebrow">The final edit</p>
+          <h2>Wear beyond limits.</h2>
+          <p>
+            Style is not a boundary. It is the freedom to move, create, and become more of who you are in every place and every moment.
+          </p>
+          <p class="story-motto">WEAR BEYOND LIMITS</p>
+          <a href="shop.html" class="text-link">Discover the collection</a>
+        </div>
+      </section>
+
+      <section class="newsletter-band container">
+        <div class="newsletter-box">
+          <div class="newsletter-copy">
+            <p class="eyebrow">Stay in the loop</p>
+            <h2>Get first access to new arrivals and private offers.</h2>
+          </div>
+
+          <form class="subscribe-form" aria-label="Email signup form">
+            <input type="email" placeholder="Your email address" aria-label="Your email address" />
+            <button type="submit" class="btn btn-primary">Join now</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-brand-block">
+          <a href="index.html" class="brand"><img src="cza-logo.svg" alt="CZA" /></a>
+          <p>Seeking elevated essentials for everyday rituals.</p>
+        </div>
+
+        <div class="footer-col">
+          <h3>Shop</h3>
+          <ul>
+            <li><a href="shop.html">New arrivals</a></li>
+            <li><a href="#women">Women</a></li>
+            <li><a href="#men">Men</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>About</h3>
+          <ul>
+            <li><a href="#">Our story</a></li>
+            <li><a href="#">Journal</a></li>
+            <li><a href="#">Sustainability</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h3>Contact</h3>
+          <ul>
+            <li><a href="mailto:hello@cza.com">hello@cza.com</a></li>
+            <li><a href="tel:+256742322972">+256-742-322972</a></li>
+            <li><a href="#">Instagram</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="container footer-bottom">
+        <span>© <span id="year"></span> CZA</span>
+        <span>Privacy Policy</span>
+        <span>Shipping & Returns</span>
+      </div>
+    </footer>
+
+    <div class="floating-chat" id="floating-chat">
+      <button class="chat-toggle" type="button" aria-label="Open chat">Chat with CZA</button>
+      <div class="chat-window hidden" id="chat-window">
+        <div class="chat-header">
+          <strong>CZA support</strong>
+          <button type="button" class="chat-close">×</button>
+        </div>
+        <p>Need help with an order or styling advice?</p>
+        <a class="whatsapp-link" href="https://wa.me/256742322972?text=Hello%20CZA%2C%20I%20want%20to%20ask%20about%20an%20order." target="_blank" rel="noreferrer">Chat on WhatsApp</a>
+      </div>
+    </div>
+
+    <div class="toast" id="toast" aria-live="polite"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

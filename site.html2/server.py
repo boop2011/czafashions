@@ -7,6 +7,11 @@ import json
 import os
 import uuid
 
+try:
+    import psycopg2  # type: ignore[import-not-found]
+except Exception:
+    psycopg2 = None
+
 ROOT = Path(__file__).resolve().parent
 DATA_DIR = ROOT / "data"
 DATA_DIR.mkdir(exist_ok=True)
@@ -111,6 +116,11 @@ def ensure_json(path: Path, default):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def write_json(path: Path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
 def normalize_phone_number(phone_number):
     if not phone_number:
         return ""
@@ -122,6 +132,200 @@ def normalize_phone_number(phone_number):
 
 def is_makypay_configured():
     return bool(MAKYPAY_BASE64_HEADER and MAKYPAY_BASE64_HEADER != "YOUR_BASE64_HEADER")
+
+
+def get_database_url():
+    return os.getenv("DATABASE_URL", "")
+
+
+def has_database():
+    return bool(get_database_url()) and psycopg2 is not None
+
+
+def get_db_connection():
+    if not has_database():
+        return None
+
+    try:
+        return psycopg2.connect(get_database_url(), sslmode="require")
+    except Exception:
+        return None
+
+
+def ensure_database():
+    if not has_database():
+        return False
+
+    conn = get_db_connection()
+    if conn is None:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS products (
+                    id bigint PRIMARY KEY,
+                    payload jsonb NOT NULL
+                )
+                """
+            )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS orders (
+                    id bigint PRIMARY KEY,
+                    payload jsonb NOT NULL
+                )
+                """
+            )
+
+            cur.execute("SELECT COUNT(*) FROM products")
+            if cur.fetchone()[0] == 0:
+                for product in DEFAULT_PRODUCTS:
+                    cur.execute(
+                        "INSERT INTO products (id, payload) VALUES (%s, %s)",
+                        (product["id"], json.dumps(product)),
+                    )
+
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def load_products_from_db():
+    conn = get_db_connection()
+    if conn is None:
+        return None
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT payload FROM products ORDER BY id ASC")
+            rows = cur.fetchall()
+        return [json.loads(row[0]) for row in rows]
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+def load_orders_from_db():
+    conn = get_db_connection()
+    if conn is None:
+        return None
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT payload FROM orders ORDER BY id DESC")
+            rows = cur.fetchall()
+        return [json.loads(row[0]) for row in rows]
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+
+def save_products_to_db(products):
+    conn = get_db_connection()
+    if conn is None:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM products")
+            for product in products:
+                cur.execute(
+                    "INSERT INTO products (id, payload) VALUES (%s, %s)",
+                    (product.get("id"), json.dumps(product)),
+                )
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def save_orders_to_db(orders):
+    conn = get_db_connection()
+    if conn is None:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM orders")
+            for order in orders:
+                cur.execute(
+                    "INSERT INTO orders (id, payload) VALUES (%s, %s)",
+                    (order.get("id"), json.dumps(order)),
+                )
+        conn.commit()
+        return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def load_products_from_file():
+    return ensure_json(DATA_DIR / "products.json", DEFAULT_PRODUCTS)
+
+
+def load_orders_from_file():
+    return ensure_json(DATA_DIR / "orders.json", [])
+
+
+def save_products_to_file(products):
+    write_json(DATA_DIR / "products.json", products)
+
+
+def save_orders_to_file(orders):
+    write_json(DATA_DIR / "orders.json", orders)
+
+
+def get_products():
+    if has_database():
+        ensure_database()
+        products = load_products_from_db()
+        if products is not None:
+            return products
+
+    return load_products_from_file()
+
+
+def get_orders():
+    if has_database():
+        ensure_database()
+        orders = load_orders_from_db()
+        if orders is not None:
+            return orders
+
+    return load_orders_from_file()
+
+
+def save_products(products):
+    if has_database():
+        if save_products_to_db(products):
+            save_products_to_file(products)
+            return True
+
+    save_products_to_file(products)
+    return True
+
+
+def save_orders(orders):
+    if has_database():
+        if save_orders_to_db(orders):
+            save_orders_to_file(orders)
+            return True
+
+    save_orders_to_file(orders)
+    return True
 
 
 def build_makypay_body(order_payload):
@@ -210,13 +414,11 @@ class AppHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/api/products":
-            products = ensure_json(DATA_DIR / "products.json", DEFAULT_PRODUCTS)
-            self.send_json(products)
+            self.send_json(get_products())
             return
 
         if self.path == "/api/orders":
-            orders = ensure_json(DATA_DIR / "orders.json", [])
-            self.send_json(orders)
+            self.send_json(get_orders())
             return
 
         if self.path == "/api/makypay/config":
@@ -237,7 +439,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         if self.path == "/api/products":
             payload = self.read_json_body()
             if isinstance(payload, list):
-                (DATA_DIR / "products.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+                save_products(payload)
                 self.send_json({"ok": True, "count": len(payload)})
                 return
 
@@ -247,7 +449,7 @@ class AppHandler(SimpleHTTPRequestHandler):
         if self.path == "/api/orders":
             payload = self.read_json_body()
             if isinstance(payload, list):
-                (DATA_DIR / "orders.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+                save_orders(payload)
                 self.send_json({"ok": True, "count": len(payload)})
                 return
 
@@ -272,7 +474,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             event_type = payload.get("event_type")
             if event_type == "collection.completed":
                 reference = payload.get("transaction", {}).get("reference")
-                orders = ensure_json(DATA_DIR / "orders.json", [])
+                orders = get_orders()
                 updated = False
 
                 for order in orders:
@@ -284,7 +486,7 @@ class AppHandler(SimpleHTTPRequestHandler):
                         updated = True
 
                 if updated:
-                    (DATA_DIR / "orders.json").write_text(json.dumps(orders, indent=2), encoding="utf-8")
+                    save_orders(orders)
 
                 self.send_json({"ok": True, "updated": updated, "event_type": event_type})
                 return
@@ -317,6 +519,7 @@ class AppHandler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     ensure_json(DATA_DIR / "products.json", DEFAULT_PRODUCTS)
     ensure_json(DATA_DIR / "orders.json", [])
+    ensure_database()
 
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))

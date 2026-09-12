@@ -1,7 +1,7 @@
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, quote, urlencode, urlparse
 from urllib.request import Request, urlopen
 import json
 import os
@@ -102,12 +102,16 @@ DEFAULT_PRODUCTS = [
 MAKYPAY_BASE64_HEADER = os.getenv(
     "MAKYPAY_BASE64_HEADER",
     "bWFreV92MV9wdWJfVlhHdE5CN1ZETkE4dXJzVlYzVGY6bWFreV92MV9zZWNfWlVsN1JwWjRTRXRXNUZQVWszOHFHUXd3U0E2T1BqUTY=",
-)
-MAKYPAY_SECRET_KEY = os.getenv("MAKYPAY_SECRET_KEY", "maky_v1_sec_ZUl7RpZ4SEtW5FPUk38qGQwwSA6OPjQ6")
+).strip()
+MAKYPAY_SECRET_KEY = os.getenv("MAKYPAY_SECRET_KEY", "maky_v1_sec_ZUl7RpZ4SEtW5FPUk38qGQwwSA6OPjQ6").strip()
 MAKYPAY_API_BASE_URL = os.getenv("MAKYPAY_API_BASE_URL", "https://wire-api.makylegacy.com/api/v1")
 MAKYPAY_SUCCESS_URL = os.getenv("MAKYPAY_SUCCESS_URL", "https://czafashions.com/shop")
 MAKYPAY_CANCEL_URL = os.getenv("MAKYPAY_CANCEL_URL", "https://czafashions.com/shop")
 MAKYPAY_WEBHOOK_SECRET = os.getenv("MAKYPAY_WEBHOOK_SECRET", "")
+MAKYPAY_WEBHOOK_TOKEN = os.getenv("MAKYPAY_WEBHOOK_TOKEN", "")
+DODO_API_SECRET = os.getenv("DODO_API_SECRET", "cRKy0MNHs-pLl7s_.1GiTxYMGecFsuVKl5dDNGgQWgEKaThahLrSF_GlZcoPi0Teh").strip()
+DODO_BUSINESS_ID = os.getenv("DODO_BUSINESS_ID", "").strip()
+DODO_API_BASE_URL = os.getenv("DODO_API_BASE_URL", "https://api.dodopayments.com/v1")
 
 
 def ensure_json(path: Path, default):
@@ -131,7 +135,20 @@ def normalize_phone_number(phone_number):
 
 
 def is_makypay_configured():
-    return bool(MAKYPAY_BASE64_HEADER and MAKYPAY_BASE64_HEADER != "YOUR_BASE64_HEADER")
+    base64_header = (MAKYPAY_BASE64_HEADER or "").strip()
+    secret_key = (MAKYPAY_SECRET_KEY or "").strip()
+    return bool(
+        base64_header
+        and secret_key
+        and base64_header != "YOUR_BASE64_HEADER"
+        and not secret_key.startswith("your_")
+        and secret_key != "demo"
+    )
+
+
+def is_dodo_configured():
+    secret_key = (DODO_API_SECRET or "").strip()
+    return bool(secret_key and secret_key != "demo" and not secret_key.startswith("your_"))
 
 
 def get_database_url():
@@ -150,6 +167,131 @@ def get_db_connection():
         return psycopg2.connect(get_database_url(), sslmode="require")
     except Exception:
         return None
+
+
+def get_webhook_url():
+    base_url = "https://czafashions.com/webhooks/makypay"
+    if MAKYPAY_WEBHOOK_TOKEN:
+        return f"{base_url}?secret={quote(MAKYPAY_WEBHOOK_TOKEN, safe='')}"
+    return base_url
+
+
+def get_webhook_secret_from_path(request_path):
+    parsed = urlparse(request_path)
+    query_params = parse_qs(parsed.query)
+    values = query_params.get("secret", [])
+    return values[0] if values else ""
+
+
+def extract_transaction_reference(payload):
+    if not isinstance(payload, dict):
+        return ""
+
+    transaction = payload.get("transaction")
+    if isinstance(transaction, dict):
+        reference = transaction.get("reference") or transaction.get("uuid")
+        if reference:
+            return str(reference)
+
+    reference = payload.get("reference") or payload.get("uuid")
+    return str(reference) if reference else ""
+
+
+def normalize_verified_status(payload):
+    if not isinstance(payload, dict):
+        return "unknown"
+
+    if payload.get("status"):
+        return str(payload.get("status")).lower()
+
+    transaction = payload.get("transaction")
+    if isinstance(transaction, dict) and transaction.get("status"):
+        return str(transaction.get("status")).lower()
+
+    data = payload.get("data")
+    if isinstance(data, dict) and data.get("status"):
+        return str(data.get("status")).lower()
+
+    return "unknown"
+
+
+def verify_makypay_transaction(reference):
+    if not reference:
+        return {"verified": False, "status": "unknown", "message": "Missing transaction reference."}
+
+    if not is_makypay_configured():
+        return {
+            "verified": False,
+            "status": "demo",
+            "message": "MakPay credentials are not configured. Demo checkout is active.",
+        }
+
+    try:
+        request = Request(
+            f"{MAKYPAY_API_BASE_URL}/collections/collect-money/{reference}",
+            headers={
+                "Authorization": f"Basic {MAKYPAY_BASE64_HEADER}",
+                "Accept": "application/json",
+            },
+            method="GET",
+        )
+
+        with urlopen(request, timeout=20) as response:
+            body = response.read().decode("utf-8")
+            if not body:
+                return {"verified": False, "status": "unknown", "message": "Blank response from MakPay."}
+
+            try:
+                payload = json.loads(body)
+                return {
+                    "verified": True,
+                    "status": normalize_verified_status(payload),
+                    "data": payload,
+                }
+            except Exception as exc:
+                return {"verified": False, "status": "unknown", "message": f"Unable to parse MakPay response: {exc}"}
+    except (HTTPError, URLError) as exc:
+        details = exc.read().decode("utf-8", errors="ignore") if hasattr(exc, "read") else str(exc)
+        return {
+            "verified": False,
+            "status": "error",
+            "message": "Unable to verify the transaction with MakPay.",
+            "details": details,
+        }
+    except Exception as exc:
+        return {
+            "verified": False,
+            "status": "error",
+            "message": "Unable to verify the transaction with MakPay.",
+            "details": str(exc),
+        }
+
+
+def update_verified_order(reference, verified_status, provider="makypay", paid_at=None):
+    orders = get_orders()
+    updated = False
+
+    for order in orders:
+        if str(order.get("reference") or order.get("id") or "") != str(reference):
+            continue
+
+        if verified_status == "completed":
+            order["status"] = "Paid"
+            order["paymentStatus"] = "completed"
+            order["paymentProvider"] = provider
+            if paid_at:
+                order["paidAt"] = paid_at
+        else:
+            order["status"] = "Payment failed"
+            order["paymentStatus"] = verified_status
+            order["paymentProvider"] = provider
+
+        updated = True
+
+    if updated:
+        save_orders(orders)
+
+    return updated
 
 
 def ensure_database():
@@ -334,7 +476,13 @@ def build_makypay_body(order_payload):
         amount_value = order_payload.get("total") or 0
 
     amount = int(float(amount_value))
-    reference = str(order_payload.get("reference") or order_payload.get("id") or uuid.uuid4())
+
+    candidate_reference = order_payload.get("reference") or order_payload.get("id")
+    if candidate_reference and str(candidate_reference).count("-") == 4:
+        reference = str(candidate_reference)
+    else:
+        reference = str(uuid.uuid4())
+
     country = str(order_payload.get("country") or order_payload.get("deliveryCountry") or "UG").strip() or "UG"
 
     form_data = {
@@ -408,6 +556,56 @@ def invoke_makypay_collection(order_payload):
         }
 
 
+def create_dodo_payment_intent(order_payload):
+    if not is_dodo_configured():
+        return {
+            "ok": False,
+            "error": "Dodo Payments credentials are not configured.",
+        }
+
+    try:
+        request_body = {
+            "amount": int(order_payload.get("amount", 0)),
+            "currency": order_payload.get("currency", "UGX"),
+            "description": f"Order from CZA - {order_payload.get('customerName', 'Customer')}",
+            "customerEmail": order_payload.get("customerEmail", ""),
+            "customerPhone": order_payload.get("customerPhone", ""),
+            "metadata": {
+                "orderId": order_payload.get("id"),
+                "customerName": order_payload.get("customerName", "Customer"),
+                "deliveryAddress": order_payload.get("deliveryAddress", ""),
+                "items": order_payload.get("items", []),
+            },
+        }
+
+        if DODO_BUSINESS_ID:
+            request_body["businessId"] = DODO_BUSINESS_ID
+
+        request = Request(
+            f"{DODO_API_BASE_URL}/payments/intents",
+            data=json.dumps(request_body).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {DODO_API_SECRET}",
+            },
+            method="POST",
+        )
+
+        with urlopen(request, timeout=20) as response:
+            body = response.read().decode("utf-8")
+            if not body:
+                return {"ok": True, "data": {}}
+            try:
+                return {"ok": True, "data": json.loads(body)}
+            except Exception:
+                return {"ok": True, "data": {"raw": body}}
+    except (HTTPError, URLError) as exc:
+        details = exc.read().decode("utf-8", errors="ignore") if hasattr(exc, "read") else str(exc)
+        return {"ok": False, "error": details or "Unable to create Dodo payment intent."}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
 class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -428,7 +626,18 @@ class AppHandler(SimpleHTTPRequestHandler):
                     "successUrl": MAKYPAY_SUCCESS_URL,
                     "cancelUrl": MAKYPAY_CANCEL_URL,
                     "baseUrl": MAKYPAY_API_BASE_URL,
-                    "webhookUrl": "https://czafashions.com/webhooks/makypay",
+                    "webhookUrl": get_webhook_url(),
+                    "webhookTokenConfigured": bool(MAKYPAY_WEBHOOK_TOKEN),
+                }
+            )
+            return
+
+        if self.path == "/api/dodo/config":
+            self.send_json(
+                {
+                    "configured": is_dodo_configured(),
+                    "businessId": DODO_BUSINESS_ID,
+                    "baseUrl": "/api/dodo",
                 }
             )
             return
@@ -465,33 +674,77 @@ class AppHandler(SimpleHTTPRequestHandler):
             self.send_json(response)
             return
 
-        if self.path == "/webhooks/makypay":
+        if self.path == "/api/dodo/create-intent":
+            payload = self.read_json_body()
+            if not isinstance(payload, dict):
+                self.send_json({"ok": False, "error": "Expected a JSON object."}, status=400)
+                return
+
+            result = create_dodo_payment_intent(payload)
+            if result.get("ok"):
+                self.send_json(result.get("data", {}))
+                return
+
+            self.send_json({"error": result.get("error", "Unable to create Dodo payment intent.")}, status=502)
+            return
+
+        if self.path.startswith("/webhooks/makypay"):
+            if MAKYPAY_WEBHOOK_TOKEN and get_webhook_secret_from_path(self.path) != MAKYPAY_WEBHOOK_TOKEN:
+                self.send_json({"ok": False, "error": "Unauthorized webhook request."}, status=401)
+                return
+
             payload = self.read_json_body()
             if not isinstance(payload, dict):
                 self.send_json({"ok": False, "error": "Expected a JSON object."}, status=400)
                 return
 
             event_type = payload.get("event_type")
-            if event_type == "collection.completed":
-                reference = payload.get("transaction", {}).get("reference")
-                orders = get_orders()
-                updated = False
-
-                for order in orders:
-                    if str(order.get("reference") or order.get("id") or "") == str(reference):
-                        order["status"] = "Paid"
-                        order["paymentStatus"] = "completed"
-                        order["paymentProvider"] = payload.get("collection", {}).get("provider", "makypay")
-                        order["paidAt"] = payload.get("metadata", {}).get("response_timestamp")
-                        updated = True
-
-                if updated:
-                    save_orders(orders)
-
-                self.send_json({"ok": True, "updated": updated, "event_type": event_type})
+            reference = extract_transaction_reference(payload)
+            if not reference:
+                self.send_json({"ok": False, "error": "Missing transaction reference in webhook payload."}, status=400)
                 return
 
-            self.send_json({"ok": True, "ignored": True, "event_type": event_type})
+            verification = verify_makypay_transaction(reference)
+            if not verification.get("verified"):
+                self.send_json(
+                    {
+                        "ok": False,
+                        "verified": False,
+                        "reference": reference,
+                        "event_type": event_type,
+                        "message": verification.get("message", "Unable to verify transaction."),
+                        "details": verification.get("details", ""),
+                    },
+                    status=400,
+                )
+                return
+
+            verified_status = verification.get("status", "unknown")
+            provider = payload.get("collection", {}).get("provider", "makypay") if isinstance(payload.get("collection"), dict) else "makypay"
+            paid_at = None
+            if isinstance(payload.get("metadata"), dict):
+                paid_at = payload.get("metadata", {}).get("response_timestamp")
+
+            if verified_status == "completed":
+                updated = update_verified_order(reference, verified_status, provider, paid_at)
+                self.send_json({"ok": True, "verified": True, "updated": updated, "event_type": event_type, "reference": reference, "transaction_status": verified_status})
+                return
+
+            if verified_status in {"failed", "cancelled", "expired", "declined"}:
+                updated = update_verified_order(reference, verified_status, provider, paid_at)
+                self.send_json({"ok": True, "verified": True, "updated": updated, "event_type": event_type, "reference": reference, "transaction_status": verified_status})
+                return
+
+            self.send_json(
+                {
+                    "ok": True,
+                    "verified": True,
+                    "ignored": True,
+                    "event_type": event_type,
+                    "reference": reference,
+                    "transaction_status": verified_status,
+                }
+            )
             return
 
         self.send_json({"ok": False, "error": "Not found."}, status=404)

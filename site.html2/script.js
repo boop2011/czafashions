@@ -128,8 +128,7 @@ function getCurrency() {
 
 function formatMoney(value, currency = null) {
   const curr = currency || getCurrency();
-  const rate = currencyRates[curr] || 1;
-  const amount = Number(value) * rate;
+  const amount = Number(value) || 0;
   return new Intl.NumberFormat("en-US", { style: "currency", currency: curr, maximumFractionDigits: curr === "UGX" ? 0 : 2 }).format(amount);
 }
 
@@ -524,11 +523,11 @@ function renderDashboard() {
         const form = document.getElementById("product-form");
         form.elements.productId.value = product.id;
         form.elements.name.value = product.name;
-        form.elements.price.value = Math.round(product.price * (currencyRates[getCurrency()] || 1));
+        form.elements.price.value = Math.round(product.price || 0);
         form.elements.category.value = product.category;
         form.elements.sizes.value = (product.sizes || []).join(", ");
         form.elements.colors.value = (product.colors || []).join(", ");
-        form.elements.discountPrice.value = product.discountPrice ? Math.round(product.discountPrice * (currencyRates[getCurrency()] || 1)) : "";
+        form.elements.discountPrice.value = product.discountPrice ? Math.round(product.discountPrice || 0) : "";
         form.elements.discountPercent.value = product.discountPercent || "";
         form.elements.image.value = product.image;
         document.getElementById("product-submit").textContent = "Save changes";
@@ -880,8 +879,8 @@ function bindAdminProductForm() {
     const newProduct = {
       id: productId ? Number(productId) : Date.now(),
       name: String(formData.get("name") || "").trim(),
-      price: Number(formData.get("price") || 0) / (currencyRates[getCurrency()] || 1),
-      discountPrice: Number(formData.get("discountPrice") || 0) / (currencyRates[getCurrency()] || 1),
+      price: Number(formData.get("price") || 0),
+      discountPrice: Number(formData.get("discountPrice") || 0),
       discountPercent: Math.min(100, Math.max(0, Number(formData.get("discountPercent") || 0))),
       sizes: String(formData.get("sizes") || "").split(",").map((size) => size.trim().toUpperCase()).filter(Boolean),
       colors: String(formData.get("colors") || "").split(",").map((color) => color.trim()).filter(Boolean),
@@ -1146,20 +1145,14 @@ function initShopCheckout() {
 // ============================================
 
 const DODO_CONFIG = {
-  apiKey: "demo",
-  businessId: "demo",
-  apiUrl: "https://api.dodopayments.com/v1",
+  apiUrl: "/api/dodo",
+  businessId: "",
 };
 
+let dodoConfigured = false;
+
 function isDodoConfigured() {
-  return Boolean(
-    DODO_CONFIG.apiKey &&
-      DODO_CONFIG.businessId &&
-      !DODO_CONFIG.apiKey.startsWith("your_") &&
-      !DODO_CONFIG.businessId.startsWith("your_") &&
-      DODO_CONFIG.apiKey !== "demo" &&
-      DODO_CONFIG.businessId !== "demo"
-  );
+  return dodoConfigured;
 }
 
 function updateGatewayStatus() {
@@ -1187,20 +1180,22 @@ let selectedCurrencyForPayment = "UGX";
 let dodoInstance = null;
 
 async function initializeDodoPayments() {
-  updateGatewayStatus();
-
   try {
-    if (window.Dodo && isDodoConfigured()) {
-      dodoInstance = Dodo.setPublishableKey(DODO_CONFIG.apiKey);
-      console.log("Dodo Payments initialized successfully");
-    } else if (!isDodoConfigured()) {
-      console.warn("Dodo Payments is not configured. Using demo checkout flow.");
+    const response = await fetch("/api/dodo/config");
+    if (response.ok) {
+      const config = await response.json();
+      dodoConfigured = Boolean(config.configured);
+      DODO_CONFIG.businessId = config.businessId || "";
+      DODO_CONFIG.apiUrl = config.baseUrl || "/api/dodo";
     } else {
-      console.error("Dodo Payments SDK not loaded");
+      dodoConfigured = false;
     }
   } catch (error) {
-    console.error("Error initializing Dodo Payments:", error);
+    console.warn("Could not load Dodo configuration:", error);
+    dodoConfigured = false;
   }
+
+  updateGatewayStatus();
 }
 
 function getCurrencyRate(currency) {
@@ -1209,7 +1204,7 @@ function getCurrencyRate(currency) {
 }
 
 function convertPrice(basePrice, currency) {
-  return basePrice * getCurrencyRate(currency);
+  return Number(basePrice) || 0;
 }
 
 function getCartTotal(currency = "USD") {
@@ -1228,7 +1223,6 @@ async function createDodoPaymentIntent(orderData) {
     const requestBody = {
       amount: amount,
       currency: selectedCurrencyForPayment,
-      businessId: DODO_CONFIG.businessId,
       description: `Order from CZA - ${orderData.customerName}`,
       customerEmail: orderData.customerEmail,
       customerPhone: orderData.customerPhone,
@@ -1240,21 +1234,24 @@ async function createDodoPaymentIntent(orderData) {
       },
     };
 
-    const response = await fetch(`${DODO_CONFIG.apiUrl}/payments/intents`, {
+    if (DODO_CONFIG.businessId) {
+      requestBody.businessId = DODO_CONFIG.businessId;
+    }
+
+    const response = await fetch(`${DODO_CONFIG.apiUrl}/create-intent`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${DODO_CONFIG.apiKey}`,
       },
       body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to create payment intent: ${response.statusText}`);
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.error || `Failed to create payment intent: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
     console.error("Error creating payment intent:", error);
     throw error;
@@ -1275,6 +1272,7 @@ async function processCardPayment(event) {
   const formData = new FormData(form);
   const checkoutButton = document.getElementById("checkout-submit");
   const paymentLoading = document.getElementById("payment-loading");
+  const paymentMethod = String(formData.get("paymentMethod") || "card");
 
   try {
     checkoutButton.disabled = true;
@@ -1306,8 +1304,48 @@ async function processCardPayment(event) {
       currency: selectedCurrencyForPayment,
       status: "Pending",
       createdAt: new Date().toISOString(),
-      paymentMethod: formData.get("paymentMethod") || "card",
+      paymentMethod,
     };
+
+    if (paymentMethod === "card") {
+      if (!isDodoConfigured()) {
+        await initializeDodoPayments();
+      }
+
+      if (!isDodoConfigured()) {
+        showToast("Card payments are not fully configured yet. Switching to demo checkout.");
+        await simulatePaymentProcessing(order, null);
+        paymentLoading.classList.remove("show");
+        checkoutButton.disabled = false;
+        return;
+      }
+
+      try {
+        const dodoPaymentIntent = await createDodoPaymentIntent(order);
+        const checkoutUrl = dodoPaymentIntent?.checkout_url || dodoPaymentIntent?.checkoutUrl || dodoPaymentIntent?.payment_url || dodoPaymentIntent?.paymentUrl || dodoPaymentIntent?.url || dodoPaymentIntent?.link;
+
+        order.reference = dodoPaymentIntent?.reference || dodoPaymentIntent?.transaction?.reference || order.id;
+        order.paymentProvider = "dodo";
+        order.paymentStatus = dodoPaymentIntent?.status || "processing";
+
+        if (checkoutUrl) {
+          sessionStorage.setItem("pending_order", JSON.stringify(order));
+          sessionStorage.setItem("payment_redirect_url", checkoutUrl);
+          window.location.href = checkoutUrl;
+          return;
+        }
+
+        completeOrder(order);
+      } catch (dodoError) {
+        console.error("Dodo payment flow failed:", dodoError);
+        showToast("Dodo Payments failed, so the checkout is falling back to demo mode.");
+        await simulatePaymentProcessing(order, null);
+      }
+
+      paymentLoading.classList.remove("show");
+      checkoutButton.disabled = false;
+      return;
+    }
 
     const makypayResponse = await fetch("/api/makypay/collect", {
       method: "POST",

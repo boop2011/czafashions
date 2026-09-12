@@ -3,6 +3,8 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, urlencode, urlparse
 from urllib.request import Request, urlopen
+import hashlib
+import hmac
 import json
 import os
 import uuid
@@ -112,6 +114,12 @@ MAKYPAY_WEBHOOK_TOKEN = os.getenv("MAKYPAY_WEBHOOK_TOKEN", "")
 DODO_API_SECRET = os.getenv("DODO_API_SECRET", "cRKy0MNHs-pLl7s_.1GiTxYMGecFsuVKl5dDNGgQWgEKaThahLrSF_GlZcoPi0Teh").strip()
 DODO_BUSINESS_ID = os.getenv("DODO_BUSINESS_ID", "").strip()
 DODO_API_BASE_URL = os.getenv("DODO_API_BASE_URL", "https://api.dodopayments.com/v1")
+JJUMA_PUBLIC_KEY = os.getenv("JJUMA_PUBLIC_KEY", "bp_live_pub_eae02fdfbff5e103288f2fa5cf35f21a").strip()
+JJUMA_SECRET_KEY = os.getenv("JJUMA_SECRET_KEY", "bp_live_sec_925e13de1e9700b63c3bfb05c9558902bc010db89f7ffbd4").strip()
+JJUMA_WEBHOOK_SECRET = os.getenv("JJUMA_WEBHOOK_SECRET", "whsec_98c797dee4be7468f3bfbe1eb015328be16cb140eb5ba703").strip()
+JJUMA_API_BASE_URL = os.getenv("JJUMA_API_BASE_URL", "https://api.jjuma.com").strip()
+JJUMA_SUCCESS_URL = os.getenv("JJUMA_SUCCESS_URL", "https://czafashions.com/checkout.html?payment=success").strip()
+JJUMA_CANCEL_URL = os.getenv("JJUMA_CANCEL_URL", "https://czafashions.com/checkout.html?payment=failed").strip()
 
 
 def ensure_json(path: Path, default):
@@ -149,6 +157,22 @@ def is_makypay_configured():
 def is_dodo_configured():
     secret_key = (DODO_API_SECRET or "").strip()
     return bool(secret_key and secret_key != "demo" and not secret_key.startswith("your_"))
+
+
+def is_jjuma_configured():
+    public_key = (JJUMA_PUBLIC_KEY or "").strip()
+    secret_key = (JJUMA_SECRET_KEY or "").strip()
+    webhook_secret = (JJUMA_WEBHOOK_SECRET or "").strip()
+    return bool(
+        public_key
+        and secret_key
+        and webhook_secret
+        and public_key != "demo"
+        and secret_key != "demo"
+        and not public_key.startswith("your_")
+        and not secret_key.startswith("your_")
+        and not webhook_secret.startswith("your_")
+    )
 
 
 def get_database_url():
@@ -606,6 +630,123 @@ def create_dodo_payment_intent(order_payload):
         return {"ok": False, "error": str(exc)}
 
 
+def build_jjuma_payment_payload(order_payload):
+    order_id = str(order_payload.get("id") or order_payload.get("orderId") or uuid.uuid4())
+    amount_value = order_payload.get("amount")
+    if amount_value in (None, ""):
+        amount_value = order_payload.get("total") or 0
+
+    amount = int(float(amount_value or 0))
+    currency = str(order_payload.get("currency") or "UGX").upper()
+    customer_name = str(order_payload.get("customerName") or order_payload.get("customer_name") or "Customer").strip()
+
+    return {
+        "amount": amount,
+        "currency": currency,
+        "description": f"Order from CZA - {customer_name}",
+        "customer_name": customer_name,
+        "customer_email": order_payload.get("customerEmail") or order_payload.get("customer_email") or "",
+        "customer_phone": order_payload.get("customerPhone") or order_payload.get("customer_phone") or "",
+        "redirect_url": JJUMA_SUCCESS_URL,
+        "return_url": JJUMA_SUCCESS_URL,
+        "cancel_redirect_url": JJUMA_CANCEL_URL,
+        "webhook_url": f"https://czafashions.com/webhooks/jjuma",
+        "metadata": {
+            "order_id": order_id,
+            "customer_name": customer_name,
+            "delivery_address": order_payload.get("deliveryAddress") or "",
+            "items": order_payload.get("items", []),
+        },
+        "external_order_id": order_id,
+        "idempotency_key": f"order-{order_id}-{uuid.uuid4()}",
+    }
+
+
+def create_jjuma_payment(order_payload):
+    if not is_jjuma_configured():
+        return {"ok": False, "error": "JJuma live credentials are not configured."}
+
+    try:
+        request_body = build_jjuma_payment_payload(order_payload)
+        request = Request(
+            f"{JJUMA_API_BASE_URL}/api/v1/payments/create",
+            data=json.dumps(request_body).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {JJUMA_PUBLIC_KEY}",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+
+        with urlopen(request, timeout=20) as response:
+            body = response.read().decode("utf-8")
+            if not body:
+                return {"ok": True, "data": {}}
+            try:
+                data = json.loads(body)
+                return {"ok": True, "data": data}
+            except Exception:
+                return {"ok": True, "data": {"raw": body}}
+    except (HTTPError, URLError) as exc:
+        details = exc.read().decode("utf-8", errors="ignore") if hasattr(exc, "read") else str(exc)
+        return {"ok": False, "error": details or "Unable to create JJuma payment."}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def verify_jjuma_payment(transaction_id):
+    if not is_jjuma_configured():
+        return {"verified": False, "status": "disabled", "message": "JJuma live credentials are not configured."}
+
+    if not transaction_id:
+        return {"verified": False, "status": "unknown", "message": "Missing transaction id."}
+
+    try:
+        request = Request(
+            f"{JJUMA_API_BASE_URL}/api/v1/payments/verify/{quote(str(transaction_id))}",
+            headers={
+                "Authorization": f"Bearer {JJUMA_SECRET_KEY}",
+                "Accept": "application/json",
+            },
+            method="GET",
+        )
+
+        with urlopen(request, timeout=20) as response:
+            body = response.read().decode("utf-8")
+            if not body:
+                return {"verified": False, "status": "unknown", "message": "Blank response from JJuma verification."}
+
+            try:
+                payload = json.loads(body)
+                status = str(payload.get("status") or payload.get("data", {}).get("status") or "unknown").lower()
+                return {"verified": True, "status": status, "data": payload}
+            except Exception as exc:
+                return {"verified": False, "status": "unknown", "message": f"Unable to parse JJuma response: {exc}"}
+    except (HTTPError, URLError) as exc:
+        details = exc.read().decode("utf-8", errors="ignore") if hasattr(exc, "read") else str(exc)
+        return {"verified": False, "status": "error", "message": "Unable to verify the JJuma transaction.", "details": details}
+    except Exception as exc:
+        return {"verified": False, "status": "error", "message": "Unable to verify the JJuma transaction.", "details": str(exc)}
+
+
+def verify_jjuma_signature(raw_body, timestamp, signature):
+    if not raw_body or not timestamp or not signature or not JJUMA_WEBHOOK_SECRET:
+        return False
+
+    forwarded_signature = signature.strip().removeprefix("sha256=")
+    if not forwarded_signature:
+        return False
+
+    expected_signature = hmac.new(
+        JJUMA_WEBHOOK_SECRET.encode("utf-8"),
+        f"{timestamp}.{raw_body.decode('utf-8', errors='ignore')}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    return hmac.compare_digest(expected_signature, forwarded_signature)
+
+
 class AppHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
@@ -640,6 +781,23 @@ class AppHandler(SimpleHTTPRequestHandler):
                     "baseUrl": "/api/dodo",
                 }
             )
+            return
+
+        if self.path == "/api/jjuma/config":
+            self.send_json(
+                {
+                    "configured": is_jjuma_configured(),
+                    "baseUrl": "/api/jjuma",
+                    "apiBaseUrl": JJUMA_API_BASE_URL,
+                    "successUrl": JJUMA_SUCCESS_URL,
+                    "cancelUrl": JJUMA_CANCEL_URL,
+                }
+            )
+            return
+
+        if self.path.startswith("/api/jjuma/verify"):
+            transaction_id = parse_qs(urlparse(self.path).query).get("transaction_id", [""])[0]
+            self.send_json(verify_jjuma_payment(transaction_id))
             return
 
         return super().do_GET()
@@ -686,6 +844,64 @@ class AppHandler(SimpleHTTPRequestHandler):
                 return
 
             self.send_json({"error": result.get("error", "Unable to create Dodo payment intent.")}, status=502)
+            return
+
+        if self.path == "/api/jjuma/create-payment":
+            payload = self.read_json_body()
+            if not isinstance(payload, dict):
+                self.send_json({"ok": False, "error": "Expected a JSON object."}, status=400)
+                return
+
+            result = create_jjuma_payment(payload)
+            if result.get("ok"):
+                self.send_json(result.get("data", {}))
+                return
+
+            self.send_json({"error": result.get("error", "Unable to create JJuma payment.")}, status=502)
+            return
+
+        if self.path.startswith("/webhooks/jjuma"):
+            raw_body = self.read_raw_body()
+            if not raw_body:
+                self.send_json({"ok": False, "error": "Expected a raw JSON body."}, status=400)
+                return
+
+            timestamp = self.headers.get("X-Jjuma-Timestamp", "")
+            signature = self.headers.get("X-Jjuma-Signature", "")
+            if not verify_jjuma_signature(raw_body, timestamp, signature):
+                self.send_json({"ok": False, "error": "Invalid JJuma webhook signature."}, status=401)
+                return
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except Exception:
+                self.send_json({"ok": False, "error": "Invalid JJuma webhook JSON."}, status=400)
+                return
+
+            event_name = str(payload.get("event") or payload.get("event_type") or payload.get("data", {}).get("event") or "").strip()
+            if not event_name:
+                event_name = str(payload.get("payment_status") or payload.get("status") or "unknown").strip()
+
+            reference = str(payload.get("reference") or payload.get("tx_ref") or payload.get("data", {}).get("reference") or payload.get("data", {}).get("tx_ref") or "").strip()
+            transaction_id = str(payload.get("transaction_id") or payload.get("data", {}).get("transaction_id") or "").strip()
+            verified_status = str(payload.get("payment_status") or payload.get("status") or payload.get("data", {}).get("payment_status") or payload.get("data", {}).get("status") or "unknown").lower()
+
+            if reference:
+                updated = update_verified_order(reference, verified_status, "jjuma", payload.get("timestamp") or payload.get("data", {}).get("timestamp"))
+            else:
+                updated = False
+
+            self.send_json(
+                {
+                    "ok": True,
+                    "verified": True,
+                    "updated": updated,
+                    "event": event_name,
+                    "reference": reference,
+                    "transaction_id": transaction_id,
+                    "transaction_status": verified_status,
+                }
+            )
             return
 
         if self.path.startswith("/webhooks/makypay"):
@@ -749,9 +965,12 @@ class AppHandler(SimpleHTTPRequestHandler):
 
         self.send_json({"ok": False, "error": "Not found."}, status=404)
 
-    def read_json_body(self):
+    def read_raw_body(self):
         length = int(self.headers.get("Content-Length", "0"))
-        body = self.rfile.read(length)
+        return self.rfile.read(length)
+
+    def read_json_body(self):
+        body = self.read_raw_body()
         try:
             return json.loads(body.decode("utf-8"))
         except Exception:

@@ -1050,8 +1050,8 @@ function initShopCheckout() {
     });
   }
 
-  // Initialize Dodo Payments
-  initializeDodoPayments();
+  // Initialize JJuma Payments
+  initializeJjumaPayments();
 
   // Setup currency selector with highlighting
   const currencyBtns = document.querySelectorAll(".currency-btn");
@@ -1141,18 +1141,17 @@ function initShopCheckout() {
 }
 
 // ============================================
-// DODO PAYMENTS INTEGRATION
+// JJUMA PAYMENTS INTEGRATION
 // ============================================
 
-const DODO_CONFIG = {
-  apiUrl: "/api/dodo",
-  businessId: "",
+const JJUMA_CONFIG = {
+  apiUrl: "/api/jjuma",
 };
 
-let dodoConfigured = false;
+let jjumaConfigured = false;
 
-function isDodoConfigured() {
-  return dodoConfigured;
+function isJjumaConfigured() {
+  return jjumaConfigured;
 }
 
 function updateGatewayStatus() {
@@ -1165,34 +1164,32 @@ function updateGatewayStatus() {
 
   if (!statusIndicator || !statusStrong || !statusText) return;
 
-  if (isDodoConfigured()) {
+  if (isJjumaConfigured()) {
     statusIndicator.style.background = "#3dbd7a";
     statusStrong.textContent = "Connected";
-    statusText.textContent = "Live gateway credentials detected.";
+    statusText.textContent = "JJuma live credentials detected.";
   } else {
     statusIndicator.style.background = "#d4a15d";
-    statusStrong.textContent = "Demo mode";
-    statusText.textContent = "Processor credentials are not configured, so the checkout uses a local demo flow.";
+    statusStrong.textContent = "Not configured";
+    statusText.textContent = "JJuma credentials are not configured yet, so live checkout is unavailable.";
   }
 }
 
 let selectedCurrencyForPayment = "UGX";
-let dodoInstance = null;
 
-async function initializeDodoPayments() {
+async function initializeJjumaPayments() {
   try {
-    const response = await fetch("/api/dodo/config");
+    const response = await fetch("/api/jjuma/config");
     if (response.ok) {
       const config = await response.json();
-      dodoConfigured = Boolean(config.configured);
-      DODO_CONFIG.businessId = config.businessId || "";
-      DODO_CONFIG.apiUrl = config.baseUrl || "/api/dodo";
+      jjumaConfigured = Boolean(config.configured);
+      JJUMA_CONFIG.apiUrl = config.baseUrl || "/api/jjuma";
     } else {
-      dodoConfigured = false;
+      jjumaConfigured = false;
     }
   } catch (error) {
-    console.warn("Could not load Dodo configuration:", error);
-    dodoConfigured = false;
+    console.warn("Could not load JJuma configuration:", error);
+    jjumaConfigured = false;
   }
 
   updateGatewayStatus();
@@ -1211,10 +1208,10 @@ function getCartTotal(currency = "USD") {
   return cart.reduce((sum, item) => sum + (item.discountPrice || item.price) * item.qty, 0);
 }
 
-async function createDodoPaymentIntent(orderData) {
+async function createJjumaPayment(orderData) {
   try {
-    if (!isDodoConfigured()) {
-      throw new Error("Dodo Payments is not configured. Add live gateway credentials to enable real payments.");
+    if (!isJjumaConfigured()) {
+      throw new Error("JJuma Payments is not configured. Add live gateway credentials to enable real payments.");
     }
 
     const total = getCartTotal(selectedCurrencyForPayment);
@@ -1226,8 +1223,11 @@ async function createDodoPaymentIntent(orderData) {
       amount: amount,
       currency: selectedCurrencyForPayment,
       description: `Order from CZA - ${orderData.customerName}`,
+      customerName: orderData.customerName,
       customerEmail: orderData.customerEmail,
       customerPhone: orderData.customerPhone,
+      customerAddress: orderData.deliveryAddress,
+      orderId: orderData.id,
       metadata: {
         orderId: orderData.id,
         customerName: orderData.customerName,
@@ -1236,11 +1236,7 @@ async function createDodoPaymentIntent(orderData) {
       },
     };
 
-    if (DODO_CONFIG.businessId) {
-      requestBody.businessId = DODO_CONFIG.businessId;
-    }
-
-    const response = await fetch(`${DODO_CONFIG.apiUrl}/create-intent`, {
+    const response = await fetch(`${JJUMA_CONFIG.apiUrl}/create-payment`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1250,12 +1246,12 @@ async function createDodoPaymentIntent(orderData) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.error || `Failed to create payment intent: ${response.statusText}`);
+      throw new Error(errorData?.error || `Failed to create JJuma payment: ${response.statusText}`);
     }
 
     return await response.json();
   } catch (error) {
-    console.error("Error creating payment intent:", error);
+    console.error("Error creating JJuma payment:", error);
     throw error;
   }
 }
@@ -1309,78 +1305,44 @@ async function processCardPayment(event) {
       paymentMethod,
     };
 
-    if (paymentMethod === "card") {
-      if (!isDodoConfigured()) {
-        await initializeDodoPayments();
+    if (paymentMethod === "card" || paymentMethod === "mobile_money") {
+      if (!isJjumaConfigured()) {
+        await initializeJjumaPayments();
       }
 
-      if (!isDodoConfigured()) {
-        showToast("Card payments are not fully configured yet. Switching to demo checkout.");
-        await simulatePaymentProcessing(order, null);
+      if (!isJjumaConfigured()) {
+        showErrorMessage("JJuma payments are not configured yet. Please add the live JJuma credentials first.");
         paymentLoading.classList.remove("show");
         checkoutButton.disabled = false;
         return;
       }
 
       try {
-        const dodoPaymentIntent = await createDodoPaymentIntent(order);
-        const checkoutUrl = dodoPaymentIntent?.checkout_url || dodoPaymentIntent?.checkoutUrl || dodoPaymentIntent?.payment_url || dodoPaymentIntent?.paymentUrl || dodoPaymentIntent?.url || dodoPaymentIntent?.link;
+        const jjumaPayment = await createJjumaPayment(order);
+        const checkoutUrl = jjumaPayment?.data?.payment_url || jjumaPayment?.payment_url || jjumaPayment?.checkout_url || jjumaPayment?.checkoutUrl || jjumaPayment?.url || jjumaPayment?.link;
 
-        order.reference = dodoPaymentIntent?.reference || dodoPaymentIntent?.transaction?.reference || order.id;
-        order.paymentProvider = "dodo";
-        order.paymentStatus = dodoPaymentIntent?.status || "processing";
-
-        if (checkoutUrl) {
-          sessionStorage.setItem("pending_order", JSON.stringify(order));
-          sessionStorage.setItem("payment_redirect_url", checkoutUrl);
-          window.location.href = checkoutUrl;
-          return;
+        if (!checkoutUrl) {
+          throw new Error("JJuma did not return a valid payment URL.");
         }
 
-        completeOrder(order);
-      } catch (dodoError) {
-        console.error("Dodo payment flow failed:", dodoError);
-        showToast("Dodo Payments failed, so the checkout is falling back to demo mode.");
-        await simulatePaymentProcessing(order, null);
+        order.reference = jjumaPayment?.data?.reference || jjumaPayment?.reference || order.id;
+        order.transactionId = jjumaPayment?.data?.transaction_id || jjumaPayment?.transaction_id || order.reference;
+        order.paymentProvider = "jjuma";
+        order.paymentStatus = jjumaPayment?.data?.status || "pending";
+
+        sessionStorage.setItem("pending_order", JSON.stringify(order));
+        sessionStorage.setItem("payment_redirect_url", checkoutUrl);
+        window.location.href = checkoutUrl;
+        return;
+      } catch (error) {
+        console.error("JJuma payment flow failed:", error);
+        showErrorMessage(error.message || "JJuma payment failed. Please try again later.");
       }
 
       paymentLoading.classList.remove("show");
       checkoutButton.disabled = false;
       return;
     }
-
-    const makypayResponse = await fetch("/api/makypay/collect", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(order),
-    });
-
-    const makypayData = makypayResponse.ok ? await makypayResponse.json() : null;
-
-    if (!makypayResponse.ok || makypayData?.demo) {
-      showToast("MakPay is unavailable right now, so this checkout is running in demo mode.");
-      await simulatePaymentProcessing(order, null);
-      paymentLoading.classList.remove("show");
-      checkoutButton.disabled = false;
-      return;
-    }
-
-    order.reference = makypayData?.data?.transaction?.reference || order.id;
-    order.paymentProvider = "makypay";
-    order.makypayStatus = makypayData?.data?.transaction?.status || "processing";
-
-    if (makypayData?.data?.redirect_url) {
-      sessionStorage.setItem("pending_order", JSON.stringify(order));
-      sessionStorage.setItem("payment_redirect_url", makypayData.data.redirect_url);
-      window.location.href = makypayData.data.redirect_url;
-      return;
-    }
-
-    // If MakPay does not return a redirect URL, continue with the existing local processing flow.
-    await simulatePaymentProcessing(order, null);
-
-    paymentLoading.classList.remove("show");
-    checkoutButton.disabled = false;
   } catch (error) {
     console.error("Payment error:", error);
     showErrorMessage(`Payment failed: ${error.message}`);
@@ -1393,8 +1355,7 @@ async function simulatePaymentProcessing(order, paymentIntent) {
   // Simulate payment processing delay
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
-  // In production, Dodo would handle the payment and redirect back
-  // For now, we'll complete the order
+  // JJuma handles the hosted checkout flow and redirects the customer back to the site.
   completeOrder(order);
 }
 
@@ -1483,8 +1444,8 @@ function initCheckoutPage() {
   if (checkoutEmpty) checkoutEmpty.style.display = "none";
   if (checkoutContent) checkoutContent.style.display = "block";
 
-  // Initialize Dodo Payments
-  initializeDodoPayments();
+  // Initialize JJuma Payments
+  initializeJjumaPayments();
 
   // Setup currency selector with highlighting
   const currencyBtns = document.querySelectorAll(".currency-btn");

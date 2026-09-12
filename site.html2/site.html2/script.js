@@ -128,8 +128,7 @@ function getCurrency() {
 
 function formatMoney(value, currency = null) {
   const curr = currency || getCurrency();
-  const rate = currencyRates[curr] || 1;
-  const amount = Number(value) * rate;
+  const amount = Number(value) || 0;
   return new Intl.NumberFormat("en-US", { style: "currency", currency: curr, maximumFractionDigits: curr === "UGX" ? 0 : 2 }).format(amount);
 }
 
@@ -524,11 +523,11 @@ function renderDashboard() {
         const form = document.getElementById("product-form");
         form.elements.productId.value = product.id;
         form.elements.name.value = product.name;
-        form.elements.price.value = Math.round(product.price * (currencyRates[getCurrency()] || 1));
+        form.elements.price.value = Math.round(product.price || 0);
         form.elements.category.value = product.category;
         form.elements.sizes.value = (product.sizes || []).join(", ");
         form.elements.colors.value = (product.colors || []).join(", ");
-        form.elements.discountPrice.value = product.discountPrice ? Math.round(product.discountPrice * (currencyRates[getCurrency()] || 1)) : "";
+        form.elements.discountPrice.value = product.discountPrice ? Math.round(product.discountPrice || 0) : "";
         form.elements.discountPercent.value = product.discountPercent || "";
         form.elements.image.value = product.image;
         document.getElementById("product-submit").textContent = "Save changes";
@@ -880,8 +879,8 @@ function bindAdminProductForm() {
     const newProduct = {
       id: productId ? Number(productId) : Date.now(),
       name: String(formData.get("name") || "").trim(),
-      price: Number(formData.get("price") || 0) / (currencyRates[getCurrency()] || 1),
-      discountPrice: Number(formData.get("discountPrice") || 0) / (currencyRates[getCurrency()] || 1),
+      price: Number(formData.get("price") || 0),
+      discountPrice: Number(formData.get("discountPrice") || 0),
       discountPercent: Math.min(100, Math.max(0, Number(formData.get("discountPercent") || 0))),
       sizes: String(formData.get("sizes") || "").split(",").map((size) => size.trim().toUpperCase()).filter(Boolean),
       colors: String(formData.get("colors") || "").split(",").map((color) => color.trim()).filter(Boolean),
@@ -1205,7 +1204,7 @@ function getCurrencyRate(currency) {
 }
 
 function convertPrice(basePrice, currency) {
-  return basePrice * getCurrencyRate(currency);
+  return Number(basePrice) || 0;
 }
 
 function getCartTotal(currency = "USD") {

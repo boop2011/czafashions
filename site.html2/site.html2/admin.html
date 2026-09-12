@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CZA Admin | Control Room</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="admin-page">
+    <main class="admin-login-screen" id="admin-login-screen">
+      <div class="admin-login-art">
+        <img class="admin-art-mark" src="cza-logo.svg" alt="CZA" />
+        <p>Wear beyond limits.</p>
+      </div>
+      <section class="admin-login-card">
+        <p class="eyebrow">Private access</p>
+        <h1>Welcome back.</h1>
+        <p>Sign in to manage orders, sales, inventory, and store settings.</p>
+        <form id="admin-login-form">
+          <label>Username<input type="text" name="username" placeholder="admin" autocomplete="username" required /></label>
+          <label>Password<input type="password" name="password" placeholder="••••••••" autocomplete="current-password" required /></label>
+          <button class="btn btn-primary" type="submit">Enter control room</button>
+        </form>
+        <a class="admin-back-link" href="index.html">Back to storefront</a>
+      </section>
+    </main>
+
+    <main class="admin-shell hidden" id="admin-shell">
+      <aside class="admin-sidebar">
+        <a class="admin-brand" href="admin.html"><img src="cza-logo.svg" alt="CZA" /><small>CONTROL ROOM</small></a>
+        <div class="admin-profile">
+          <div class="profile-avatar">A</div>
+          <div><strong>Admin account</strong><span>Store owner</span></div>
+          <span class="profile-dot"></span>
+        </div>
+        <nav class="admin-nav" aria-label="Admin navigation">
+          <a class="active" href="#overview"><span>◈</span> Overview</a>
+          <a href="#orders"><span>▣</span> Orders <b id="sidebar-order-count">0</b></a>
+          <a href="#inventory"><span>◇</span> Inventory</a>
+          <a href="#settings"><span>⚙</span> Settings</a>
+        </nav>
+        <div class="sidebar-footer"><a href="index.html">View storefront</a><button class="dashboard-close" type="button">Log out</button></div>
+      </aside>
+
+      <section class="admin-content">
+        <header class="admin-topbar">
+          <button class="admin-mobile-toggle" type="button" aria-label="Toggle sidebar" id="admin-mobile-toggle" style="display: none; width: 44px; height: 44px; border: 1px solid rgba(0,0,0,0.1); background: transparent; border-radius: 8px; cursor: pointer; font-size: 1.2rem; line-height: 1;">☰</button>
+          <div><p class="eyebrow">Tuesday, September 8, 2026</p><h1>Overview</h1></div>
+          <div class="admin-top-actions"><span class="live-indicator"><i></i> Live store</span><button class="admin-icon-button" type="button" aria-label="Notifications">♢<span></span></button><div class="top-avatar">A</div></div>
+        </header>
+
+        <section class="admin-view" id="overview">
+          <div class="stats-grid admin-stats">
+            <div class="stat-box"><span>Total sales</span><strong id="sales-total">UGX 0</strong><small class="stat-up">↑ Updated live</small></div>
+            <div class="stat-box"><span>Orders</span><strong id="orders-count">0</strong><small class="stat-neutral">All time orders</small></div>
+            <div class="stat-box"><span>Best seller</span><strong id="best-seller">—</strong><small class="stat-neutral">By units sold</small></div>
+          </div>
+          <div class="admin-grid-main">
+            <section class="dashboard-box chart-box">
+              <div class="box-header"><div><p class="box-kicker">Performance</p><h2>Sales overview</h2></div><select id="chart-period" aria-label="Chart period"><option>Last 7 days</option><option>Last 30 days</option></select></div>
+              <div class="sales-chart" id="sales-chart"><div class="chart-y"><span>UGX 500k</span><span>UGX 250k</span><span>UGX 0</span></div><div class="chart-bars"><i style="height:34%"><b>Mon</b></i><i style="height:52%"><b>Tue</b></i><i style="height:42%"><b>Wed</b></i><i style="height:70%"><b>Thu</b></i><i style="height:58%"><b>Fri</b></i><i style="height:84%"><b>Sat</b></i><i style="height:64%"><b>Sun</b></i></div></div>
+            </section>
+            <section class="dashboard-box profile-box"><div class="profile-cover"></div><div class="large-avatar">A</div><h2>Admin account</h2><p>Managing CZA worldwide</p><div class="profile-stats"><span><strong id="profile-products">0</strong> Products</span><span><strong id="profile-orders">0</strong> Orders</span></div><a href="#settings" class="btn btn-secondary">Account settings</a></section>
+          </div>
+        </section>
+
+        <section class="dashboard-box admin-orders-box" id="payments" style="background: linear-gradient(135deg, rgba(45, 125, 74, 0.08), rgba(184, 138, 59, 0.08)); border: 1px solid rgba(45, 125, 74, 0.2);"><div class="box-header"><div><p class="box-kicker">💳 Payments</p><h2>Recent transactions</h2></div><span class="order-badge" id="payments-badge">0 payments</span></div><ul class="order-list" id="payment-notifications-list" style="max-height: 400px; overflow-y: auto;"></ul></section>
+
+        <section class="dashboard-box admin-orders-box" id="orders"><div class="box-header"><div><p class="box-kicker">Customer flow</p><h2>Recent orders</h2></div><span class="order-badge" id="orders-badge">0 orders</span></div><ul class="order-list" id="order-list"></ul></section>
+
+        <section class="dashboard-box admin-inventory-box" id="inventory"><div class="box-header"><div><p class="box-kicker">Catalog control</p><h2>Inventory</h2></div></div><form id="product-form" class="product-form"><input type="hidden" name="productId" /><input type="text" name="name" placeholder="Product name" required /><input type="number" name="price" placeholder="Price in selected currency" min="1" required /><select name="category" required><option value="women">Women</option><option value="men">Men</option><option value="accessories">Accessories</option></select><input class="product-sizes" type="text" name="sizes" placeholder="Sizes: S, M, L, XL" /><input class="product-colors" type="text" name="colors" placeholder="Colors: Black, Ivory, Gold" /><div class="discount-fields"><input type="number" name="discountPrice" placeholder="Discount price (optional)" min="0" /><input type="number" name="discountPercent" placeholder="Discount % (optional)" min="0" max="100" /></div><input type="url" name="image" placeholder="Image URL" required /><div class="product-form-actions"><button type="submit" class="btn btn-primary" id="product-submit">Add product</button><button type="button" class="btn btn-secondary hidden" id="cancel-edit">Cancel edit</button></div></form><ul class="inventory-list" id="inventory-list"></ul></section>
+
+        <section class="dashboard-box settings-box" id="settings"><div class="box-header"><div><p class="box-kicker">Store preferences</p><h2>Settings</h2></div></div><div class="settings-grid"><div><label class="currency-setting">Display currency<select id="currency-setting"><option value="UGX">Ugandan shilling (UGX)</option><option value="USD">US dollar (USD)</option><option value="EUR">Euro (EUR)</option><option value="GBP">British pound (GBP)</option></select></label><p class="settings-note">Prices are shown in UGX by default. Changing this setting updates the storefront and dashboard display.</p></div><div><p class="settings-label">Payment gateway</p><div class="gateway-status"><i></i><strong>Ready to connect</strong><span>Processor credentials have not been added.</span></div><p class="settings-note">The checkout data model is ready for a secure gateway integration. No card details are stored in this site.</p></div></div><hr class="settings-divider" /><div class="account-settings"><div><p class="box-kicker">Private account</p><h3>Login details</h3><p class="settings-note">Change the username or password used for this control room.</p></div><form id="account-settings-form" class="account-form"><input type="text" name="username" placeholder="New username" autocomplete="username" required /><input type="password" name="currentPassword" placeholder="Current password" required /><input type="password" name="newPassword" placeholder="New password" minlength="8" required /><button class="btn btn-primary" type="submit">Save login details</button></form></div></section>
+      </section>
+    </main>
+    <div class="toast" id="toast" aria-live="polite"></div>
+    <script src="script.js"></script>
+  </body>
+</html>

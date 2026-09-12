@@ -637,8 +637,9 @@ def build_jjuma_payment_payload(order_payload):
         amount_value = order_payload.get("total") or 0
 
     amount = int(float(amount_value or 0))
-    currency = str(order_payload.get("currency") or "UGX").upper()
+    currency = "UGX"
     customer_name = str(order_payload.get("customerName") or order_payload.get("customer_name") or "Customer").strip()
+    payment_method = str(order_payload.get("paymentMethod") or order_payload.get("payment_method") or "card").strip().lower()
 
     return {
         "amount": amount,
@@ -656,6 +657,7 @@ def build_jjuma_payment_payload(order_payload):
             "customer_name": customer_name,
             "delivery_address": order_payload.get("deliveryAddress") or "",
             "items": order_payload.get("items", []),
+            "payment_method": payment_method,
         },
         "external_order_id": order_id,
         "idempotency_key": f"order-{order_id}-{uuid.uuid4()}",

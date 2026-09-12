@@ -120,7 +120,12 @@ function getAdminCredentials() {
   }
 }
 
-const currencyRates = { UGX: 3750, USD: 1, EUR: 0.92, GBP: 0.78 };
+const currencyRates = {
+  UGX: 1,
+  USD: 1 / 3750,
+  EUR: 1 / 4300,
+  GBP: 1 / 5000,
+};
 
 function getCurrency() {
   return localStorage.getItem(STORAGE_KEYS.currency) || "UGX";
@@ -1200,8 +1205,13 @@ function getCurrencyRate(currency) {
   return rates[currency] || 1;
 }
 
-function convertPrice(basePrice, currency) {
-  return Number(basePrice) || 0;
+function convertPrice(basePrice, currency = "UGX") {
+  const amount = Number(basePrice) || 0;
+  if (currency === "UGX") {
+    return amount;
+  }
+
+  return amount * (currencyRates[currency] || 1);
 }
 
 function getCartTotal(currency = "USD") {
@@ -1214,25 +1224,25 @@ async function createJjumaPayment(orderData) {
       throw new Error("JJuma Payments is not configured. Add live gateway credentials to enable real payments.");
     }
 
-    const total = getCartTotal(selectedCurrencyForPayment);
-    const amount = selectedCurrencyForPayment === "UGX"
-      ? Math.round(total)
-      : Math.round(convertPrice(total, selectedCurrencyForPayment) * 100);
+    const total = Number(orderData.total || getCartTotal("UGX") || 0);
+    const amount = Math.round(total);
 
     const requestBody = {
       amount: amount,
-      currency: selectedCurrencyForPayment,
+      currency: "UGX",
       description: `Order from CZA - ${orderData.customerName}`,
       customerName: orderData.customerName,
       customerEmail: orderData.customerEmail,
       customerPhone: orderData.customerPhone,
       customerAddress: orderData.deliveryAddress,
       orderId: orderData.id,
+      paymentMethod: orderData.paymentMethod,
       metadata: {
         orderId: orderData.id,
         customerName: orderData.customerName,
         deliveryAddress: orderData.deliveryAddress,
         items: orderData.items,
+        paymentMethod: orderData.paymentMethod,
       },
     };
 
@@ -1253,6 +1263,20 @@ async function createJjumaPayment(orderData) {
   } catch (error) {
     console.error("Error creating JJuma payment:", error);
     throw error;
+  }
+}
+
+function addPaymentMethodHint(checkoutUrl, paymentMethod) {
+  if (!checkoutUrl) return checkoutUrl;
+
+  try {
+    const url = new URL(checkoutUrl);
+    url.searchParams.set("payment_method", paymentMethod || "card");
+    url.searchParams.set("method", paymentMethod || "card");
+    return url.toString();
+  } catch (error) {
+    console.warn("Unable to attach payment method hint to checkout URL:", error);
+    return checkoutUrl;
   }
 }
 
@@ -1285,7 +1309,7 @@ async function processCardPayment(event) {
     }
 
     // Create order object
-    const total = getCartTotal("USD");
+    const total = getCartTotal("UGX");
     const order = {
       id: Date.now(),
       customerName: String(formData.get("customerName") || "Customer").trim(),
@@ -1299,7 +1323,7 @@ async function processCardPayment(event) {
       deliveryNotes: String(formData.get("deliveryNotes") || "").trim(),
       items: cart.map((item) => ({ name: item.name, qty: item.qty, price: item.discountPrice || item.price })),
       total: total,
-      currency: selectedCurrencyForPayment,
+      currency: "UGX",
       status: "Pending",
       createdAt: new Date().toISOString(),
       paymentMethod,
@@ -1325,14 +1349,16 @@ async function processCardPayment(event) {
           throw new Error("JJuma did not return a valid payment URL.");
         }
 
+        const checkoutUrlWithMethodHint = addPaymentMethodHint(checkoutUrl, paymentMethod);
+
         order.reference = jjumaPayment?.data?.reference || jjumaPayment?.reference || order.id;
         order.transactionId = jjumaPayment?.data?.transaction_id || jjumaPayment?.transaction_id || order.reference;
         order.paymentProvider = "jjuma";
         order.paymentStatus = jjumaPayment?.data?.status || "pending";
 
         sessionStorage.setItem("pending_order", JSON.stringify(order));
-        sessionStorage.setItem("payment_redirect_url", checkoutUrl);
-        window.location.href = checkoutUrl;
+        sessionStorage.setItem("payment_redirect_url", checkoutUrlWithMethodHint);
+        window.location.href = checkoutUrlWithMethodHint;
         return;
       } catch (error) {
         console.error("JJuma payment flow failed:", error);
@@ -1427,6 +1453,26 @@ function showErrorMessage(message) {
 }
 
 function initCheckoutPage() {
+  const paymentStatus = new URLSearchParams(window.location.search).get("payment");
+  const pendingOrderRaw = sessionStorage.getItem("pending_order");
+
+  if (paymentStatus === "success" && pendingOrderRaw) {
+    try {
+      const pendingOrder = JSON.parse(pendingOrderRaw);
+      completeOrder(pendingOrder);
+      return;
+    } catch (error) {
+      console.warn("Unable to restore pending payment order:", error);
+      sessionStorage.removeItem("pending_order");
+    }
+  }
+
+  if (paymentStatus === "failed") {
+    sessionStorage.removeItem("pending_order");
+    sessionStorage.removeItem("payment_redirect_url");
+    showErrorMessage("Your payment was not completed. You can try again or return to your bag.");
+  }
+
   // Reload cart from localStorage to ensure fresh data
   cart = JSON.parse(localStorage.getItem(STORAGE_KEYS.cart) || "[]");
   
@@ -1608,7 +1654,7 @@ function updateOrderSummary() {
         .join("")
     : '<p style="color: var(--muted); text-align: center; padding: 20px 0;">No items in bag</p>';
 
-  const baseTotal = getCartTotal("USD");
+  const baseTotal = getCartTotal("UGX");
   const convertedSubtotal = convertPrice(baseTotal, selectedCurrencyForPayment);
   const convertedTotal = convertedSubtotal; // No tax/shipping in this demo
 

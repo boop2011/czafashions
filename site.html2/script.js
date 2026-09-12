@@ -1218,7 +1218,9 @@ async function createDodoPaymentIntent(orderData) {
     }
 
     const total = getCartTotal(selectedCurrencyForPayment);
-    const amount = Math.round(convertPrice(total, selectedCurrencyForPayment) * 100); // Convert to cents
+    const amount = selectedCurrencyForPayment === "UGX"
+      ? Math.round(total)
+      : Math.round(convertPrice(total, selectedCurrencyForPayment) * 100);
 
     const requestBody = {
       amount: amount,

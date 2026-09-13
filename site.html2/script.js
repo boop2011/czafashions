@@ -1,21 +1,21 @@
 const defaultProducts = [
   {
     id: 1,
-    name: "Sculpt Knit Set",
+    name: "Street Pulse Hoodie",
     category: "women",
     price: 129,
-    subtitle: "Soft wool blend",
+    subtitle: "Oversized comfort with city-ready edge",
     badge: "New",
     rating: 4.9,
     image:
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 2,
-    name: "Tailored Wool Coat",
+    name: "Urban Drift Bomber",
     category: "women",
     price: 240,
-    subtitle: "Structured warmth",
+    subtitle: "Structured layer built for late-night sets",
     badge: "Trending",
     rating: 4.8,
     image:
@@ -23,10 +23,10 @@ const defaultProducts = [
   },
   {
     id: 3,
-    name: "Monochrome Hoodie",
+    name: "After Hours Tee",
     category: "men",
     price: 98,
-    subtitle: "Premium cotton",
+    subtitle: "Heavyweight cotton with an easy relaxed fit",
     badge: "Bestseller",
     rating: 4.7,
     image:
@@ -34,10 +34,10 @@ const defaultProducts = [
   },
   {
     id: 4,
-    name: "Layered Utility Shirt",
+    name: "Looped Utility Overshirt",
     category: "men",
     price: 118,
-    subtitle: "Relaxed fit",
+    subtitle: "Layered, effortless, and made for off-duty days",
     badge: "Limited",
     rating: 4.8,
     image:
@@ -45,10 +45,10 @@ const defaultProducts = [
   },
   {
     id: 5,
-    name: "Aster Leather Tote",
+    name: "Concrete Side Bag",
     category: "accessories",
     price: 142,
-    subtitle: "Italian leather",
+    subtitle: "Slim utility carry for everyday movement",
     badge: "Top pick",
     rating: 4.9,
     image:
@@ -56,10 +56,10 @@ const defaultProducts = [
   },
   {
     id: 6,
-    name: "Hayden Sunglasses",
+    name: "Signal Shades",
     category: "accessories",
     price: 74,
-    subtitle: "UV protection",
+    subtitle: "Bold finish for the everyday street look",
     badge: "Hot",
     rating: 4.6,
     image:
@@ -67,10 +67,10 @@ const defaultProducts = [
   },
   {
     id: 7,
-    name: "Luna Overshirt",
+    name: "Night Run Overshirt",
     category: "women",
     price: 136,
-    subtitle: "Lightweight layer",
+    subtitle: "Soft texture, oversized silhouette, all-day ease",
     badge: "New",
     rating: 4.8,
     image:
@@ -78,10 +78,10 @@ const defaultProducts = [
   },
   {
     id: 8,
-    name: "Noir Striped Tee",
+    name: "Canvas Crew Tee",
     category: "men",
     price: 68,
-    subtitle: "Essential staple",
+    subtitle: "Essential street staple built for repeat wear",
     badge: "Sale",
     rating: 4.7,
     image:
@@ -149,7 +149,8 @@ function productDetailsMarkup(product) {
   const colors = Array.isArray(product.colors) && product.colors.length
     ? `<div class="product-colors">${product.colors.map((color) => `<span class="color-chip"><i class="color-swatch" style="--swatch:${color.toLowerCase()}"></i>${color}</span>`).join("")}</div>`
     : "";
-  return `<p class="product-subtitle">${product.subtitle}</p><p class="product-sizes">Sizes: ${sizes}</p>${colors}`;
+  const description = product.description ? `<p class="product-description">${product.description}</p>` : "";
+  return `<p class="product-subtitle">${product.subtitle}</p>${description}<p class="product-sizes">Sizes: ${sizes}</p>${colors}`;
 }
 
 let cart = JSON.parse(localStorage.getItem(STORAGE_KEYS.cart) || "[]");
@@ -263,6 +264,14 @@ function showToast(message) {
   toast.classList.add("show");
   clearTimeout(showToast.timeoutId);
   showToast.timeoutId = setTimeout(() => toast.classList.remove("show"), 2000);
+}
+
+function getProductDisplayPrice(product) {
+  const price = Number(product.discountPrice || 0);
+  if (price > 0 && price < Number(product.price || 0)) {
+    return price;
+  }
+  return Number(product.price || 0);
 }
 
 function renderProducts(target, category = "all") {
@@ -530,6 +539,7 @@ function renderDashboard() {
         form.elements.name.value = product.name;
         form.elements.price.value = Math.round(product.price || 0);
         form.elements.category.value = product.category;
+        form.elements.description.value = product.description || "";
         form.elements.sizes.value = (product.sizes || []).join(", ");
         form.elements.colors.value = (product.colors || []).join(", ");
         form.elements.discountPrice.value = product.discountPrice ? Math.round(product.discountPrice || 0) : "";
@@ -652,6 +662,56 @@ function renderProductItems(target, items) {
       </article>`).join("")
     : '<p class="cart-empty">No CZA pieces matched that search.</p>';
   attachCartActions();
+}
+
+function getShopFilterState() {
+  const checkedCategories = Array.from(document.querySelectorAll('input[data-category]'))
+    .filter((checkbox) => checkbox.checked)
+    .map((checkbox) => checkbox.dataset.category);
+
+  const selectedPrice = document.querySelector('input[name="price"]:checked')?.dataset.price || "all";
+
+  return { checkedCategories, selectedPrice };
+}
+
+function applyShopFilters(products) {
+  const { checkedCategories, selectedPrice } = getShopFilterState();
+
+  let filtered = products.filter((product) => checkedCategories.includes(product.category));
+
+  if (selectedPrice === "under-100") {
+    filtered = filtered.filter((product) => getProductDisplayPrice(product) < 100);
+  } else if (selectedPrice === "100-200") {
+    filtered = filtered.filter((product) => {
+      const price = getProductDisplayPrice(product);
+      return price >= 100 && price <= 200;
+    });
+  } else if (selectedPrice === "200-plus") {
+    filtered = filtered.filter((product) => getProductDisplayPrice(product) > 200);
+  }
+
+  return filtered;
+}
+
+function renderShopProducts() {
+  const shopProducts = document.getElementById("shop-products");
+  if (!shopProducts) return;
+
+  const filteredProducts = applyShopFilters(getProducts());
+  renderProductItems(shopProducts, filteredProducts);
+}
+
+function bindShopFilters() {
+  const categoryInputs = document.querySelectorAll('input[data-category]');
+  const priceInputs = document.querySelectorAll('input[name="price"]');
+
+  categoryInputs.forEach((input) => {
+    input.addEventListener("change", renderShopProducts);
+  });
+
+  priceInputs.forEach((input) => {
+    input.addEventListener("change", renderShopProducts);
+  });
 }
 
 function bindNavbar() {
@@ -890,7 +950,8 @@ function bindAdminProductForm() {
       sizes: String(formData.get("sizes") || "").split(",").map((size) => size.trim().toUpperCase()).filter(Boolean),
       colors: String(formData.get("colors") || "").split(",").map((color) => color.trim()).filter(Boolean),
       category: String(formData.get("category") || "women").trim(),
-      subtitle: "New addition",
+      description: String(formData.get("description") || "").trim(),
+      subtitle: String(formData.get("description") || "").trim() || "New addition",
       badge: "New",
       rating: 5,
       image: String(formData.get("image") || "").trim(),
@@ -958,10 +1019,20 @@ async function initApp() {
     const params = new URLSearchParams(window.location.search);
     const searchQuery = params.get("search")?.trim().toLowerCase();
     const category = getActiveCategory();
+
+    if (category && category !== "all") {
+      const categoryInputs = document.querySelectorAll('input[data-category]');
+      categoryInputs.forEach((input) => {
+        input.checked = input.dataset.category === category;
+      });
+    }
+
+    bindShopFilters();
+
     if (searchQuery) {
       renderProductItems(shopProducts, getProducts().filter((product) => `${product.name} ${product.category} ${product.subtitle}`.toLowerCase().includes(searchQuery)));
     } else {
-      renderProducts(shopProducts, category);
+      renderShopProducts();
     }
   }
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Shop | CZA</title>
-    <meta name="description" content="Shop premium clothing, accessories and everyday essentials from CZA." />
+    <meta name="description" content="Shop streetwear essentials, accessories, and everyday staples from CZA." />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -65,16 +65,17 @@
         <aside class="shop-sidebar">
           <div class="filter-group">
             <h3>Category</h3>
-            <label><input type="checkbox" checked /> Women</label>
-            <label><input type="checkbox" checked /> Men</label>
-            <label><input type="checkbox" checked /> Accessories</label>
+            <label><input type="checkbox" data-category="women" checked /> Women</label>
+            <label><input type="checkbox" data-category="men" checked /> Men</label>
+            <label><input type="checkbox" data-category="accessories" checked /> Accessories</label>
           </div>
 
           <div class="filter-group">
             <h3>Price</h3>
-            <label><input type="radio" name="price" checked /> Under $100</label>
-            <label><input type="radio" name="price" /> $100 – $200</label>
-            <label><input type="radio" name="price" /> $200+</label>
+            <label><input type="radio" name="price" data-price="all" checked /> All prices</label>
+            <label><input type="radio" name="price" data-price="under-100" /> Under $100</label>
+            <label><input type="radio" name="price" data-price="100-200" /> $100 – $200</label>
+            <label><input type="radio" name="price" data-price="200-plus" /> $200+</label>
           </div>
 
           <div class="filter-group">

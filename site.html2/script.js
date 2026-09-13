@@ -4,84 +4,92 @@ const defaultProducts = [
     name: "Street Pulse Hoodie",
     category: "women",
     price: 129,
-    subtitle: "Oversized comfort with city-ready edge",
+    subtitle: "Boxy fit, brushed cotton, everyday comfort",
+    description: "A relaxed streetwear hoodie built for everyday wear, soft texture, and dependable city comfort.",
     badge: "New",
     rating: 4.9,
     image:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 2,
-    name: "Urban Drift Bomber",
+    name: "Block Fade Bomber",
     category: "women",
     price: 240,
-    subtitle: "Structured layer built for late-night sets",
+    subtitle: "Structured layer with a clean street edge",
+    description: "A sharp bomber silhouette with strong streetwear energy, clean lines, and a clean off-duty finish.",
     badge: "Trending",
     rating: 4.8,
     image:
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 3,
     name: "After Hours Tee",
     category: "men",
     price: 98,
-    subtitle: "Heavyweight cotton with an easy relaxed fit",
+    subtitle: "Premium cotton with a worn-in feel",
+    description: "A premium cotton tee with a relaxed fit, heavy feel, and easy street-ready styling for daily wear.",
     badge: "Bestseller",
     rating: 4.7,
     image:
-      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 4,
-    name: "Looped Utility Overshirt",
+    name: "Courtyard Overshirt",
     category: "men",
     price: 118,
-    subtitle: "Layered, effortless, and made for off-duty days",
+    subtitle: "Light layer made for movement and layering",
+    description: "A structured overshirt with a relaxed shape, premium finish, and easy layering for everyday street movement.",
     badge: "Limited",
     rating: 4.8,
     image:
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 5,
-    name: "Concrete Side Bag",
+    name: "Side Street Sling",
     category: "accessories",
     price: 142,
-    subtitle: "Slim utility carry for everyday movement",
+    subtitle: "Compact carry for everyday movement",
+    description: "A slim utility bag built for essentials, quick errands, and a clean everyday street carry setup.",
     badge: "Top pick",
     rating: 4.9,
     image:
-      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 6,
     name: "Signal Shades",
     category: "accessories",
     price: 74,
-    subtitle: "Bold finish for the everyday street look",
+    subtitle: "Sharp finish, no fuss, all attitude",
+    description: "A clean frame with a bold street look, easy everyday styling, and a fearless urban edge.",
     badge: "Hot",
     rating: 4.6,
     image:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 7,
     name: "Night Run Overshirt",
     category: "women",
     price: 136,
-    subtitle: "Soft texture, oversized silhouette, all-day ease",
+    subtitle: "Structured warmth with a relaxed shape",
+    description: "Soft textured overshirt designed for cool evenings, oversized layering, and effortless streetwear comfort.",
     badge: "New",
     rating: 4.8,
     image:
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 8,
     name: "Canvas Crew Tee",
     category: "men",
     price: 68,
-    subtitle: "Essential street staple built for repeat wear",
+    subtitle: "Everyday staple with a laid-back fit",
+    description: "A breathable crew tee in a clean streetwear cut, made for repeat wear, easy styling, and all-day comfort.",
     badge: "Sale",
     rating: 4.7,
     image:
@@ -96,6 +104,49 @@ const STORAGE_KEYS = {
   admin: "cza-admin-auth",
   currency: "cza-currency",
   credentials: "cza-admin-credentials",
+};
+
+const legacyProductUpgrades = {
+  1: {
+    subtitle: "Boxy fit, brushed cotton, everyday comfort",
+    description: "A relaxed streetwear hoodie built for everyday wear, soft texture, and dependable city comfort.",
+    image: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=80",
+  },
+  2: {
+    subtitle: "Structured layer with a clean street edge",
+    description: "A sharp bomber silhouette with strong streetwear energy, clean lines, and a clean off-duty finish.",
+    image: "https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=900&q=80",
+  },
+  3: {
+    subtitle: "Premium cotton with a worn-in feel",
+    description: "A premium cotton tee with a relaxed fit, heavy feel, and easy street-ready styling for daily wear.",
+    image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80",
+  },
+  4: {
+    subtitle: "Light layer made for movement and layering",
+    description: "A structured overshirt with a relaxed shape, premium finish, and easy layering for everyday street movement.",
+    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=80",
+  },
+  5: {
+    subtitle: "Compact carry for everyday movement",
+    description: "A slim utility bag built for essentials, quick errands, and a clean everyday street carry setup.",
+    image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
+  },
+  6: {
+    subtitle: "Sharp finish, no fuss, all attitude",
+    description: "A clean frame with a bold street look, easy everyday styling, and a fearless urban edge.",
+    image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
+  },
+  7: {
+    subtitle: "Structured warmth with a relaxed shape",
+    description: "Soft textured overshirt designed for cool evenings, oversized layering, and effortless streetwear comfort.",
+    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80",
+  },
+  8: {
+    subtitle: "Everyday staple with a laid-back fit",
+    description: "A breathable crew tee in a clean streetwear cut, made for repeat wear, easy styling, and all-day comfort.",
+    image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
+  },
 };
 
 const defaultAdminPasswordHash = "ce258a4967db3acc31388ab7df7be18e1c8ff40164b104946550c9f69b413891";
@@ -155,6 +206,28 @@ function productDetailsMarkup(product) {
 
 let cart = JSON.parse(localStorage.getItem(STORAGE_KEYS.cart) || "[]");
 
+function normalizeStoredProducts(products) {
+  const normalized = products.map((product) => {
+    const upgrade = legacyProductUpgrades[Number(product.id)];
+    if (!upgrade) {
+      return {
+        ...product,
+        subtitle: product.subtitle || product.description || "New addition",
+        description: product.description || product.subtitle || "",
+      };
+    }
+
+    return {
+      ...product,
+      ...upgrade,
+      subtitle: product.subtitle || upgrade.subtitle || "New addition",
+      description: product.description || upgrade.description || "",
+    };
+  });
+
+  return normalized;
+}
+
 function getProducts() {
   const stored = localStorage.getItem(STORAGE_KEYS.products);
   if (!stored) {
@@ -163,7 +236,14 @@ function getProducts() {
   }
 
   try {
-    return JSON.parse(stored);
+    const parsedProducts = JSON.parse(stored);
+    const normalizedProducts = normalizeStoredProducts(Array.isArray(parsedProducts) ? parsedProducts : []);
+
+    if (JSON.stringify(parsedProducts) !== JSON.stringify(normalizedProducts)) {
+      localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(normalizedProducts));
+    }
+
+    return normalizedProducts;
   } catch (error) {
     localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(defaultProducts));
     return [...defaultProducts];
@@ -509,6 +589,8 @@ function renderDashboard() {
             <div>
               <strong>${product.name}</strong><br>
               <span>${productPriceMarkup(product)}</span><br>
+              <small>${product.subtitle || "New product"}</small><br>
+              <small>${product.description || "No description yet"}</small><br>
               <small>Sizes: ${Array.isArray(product.sizes) && product.sizes.length ? product.sizes.join(", ") : "One size"}</small><br>
               <small>Colors: ${Array.isArray(product.colors) && product.colors.length ? product.colors.join(", ") : "Not set"}</small>
             </div>
@@ -539,6 +621,7 @@ function renderDashboard() {
         form.elements.name.value = product.name;
         form.elements.price.value = Math.round(product.price || 0);
         form.elements.category.value = product.category;
+        form.elements.subtitle.value = product.subtitle || "";
         form.elements.description.value = product.description || "";
         form.elements.sizes.value = (product.sizes || []).join(", ");
         form.elements.colors.value = (product.colors || []).join(", ");
@@ -950,8 +1033,8 @@ function bindAdminProductForm() {
       sizes: String(formData.get("sizes") || "").split(",").map((size) => size.trim().toUpperCase()).filter(Boolean),
       colors: String(formData.get("colors") || "").split(",").map((color) => color.trim()).filter(Boolean),
       category: String(formData.get("category") || "women").trim(),
+      subtitle: String(formData.get("subtitle") || "").trim() || String(formData.get("description") || "").trim() || "New addition",
       description: String(formData.get("description") || "").trim(),
-      subtitle: String(formData.get("description") || "").trim() || "New addition",
       badge: "New",
       rating: 5,
       image: String(formData.get("image") || "").trim(),
@@ -1029,11 +1112,12 @@ async function initApp() {
 
     bindShopFilters();
 
-    if (searchQuery) {
-      renderProductItems(shopProducts, getProducts().filter((product) => `${product.name} ${product.category} ${product.subtitle}`.toLowerCase().includes(searchQuery)));
-    } else {
-      renderShopProducts();
-    }
+    const baseProducts = getProducts();
+    const filteredProducts = searchQuery
+      ? baseProducts.filter((product) => `${product.name} ${product.category} ${product.subtitle || ""} ${product.description || ""}`.toLowerCase().includes(searchQuery))
+      : applyShopFilters(baseProducts);
+
+    renderProductItems(shopProducts, filteredProducts);
   }
 
   // Initialize checkout form in shop page if present

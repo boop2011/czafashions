@@ -120,6 +120,10 @@ JJUMA_WEBHOOK_SECRET = os.getenv("JJUMA_WEBHOOK_SECRET", "whsec_98c797dee4be7468
 JJUMA_API_BASE_URL = os.getenv("JJUMA_API_BASE_URL", "https://api.jjuma.com").strip()
 JJUMA_SUCCESS_URL = os.getenv("JJUMA_SUCCESS_URL", "https://czafashions.com/checkout.html?payment=success").strip()
 JJUMA_CANCEL_URL = os.getenv("JJUMA_CANCEL_URL", "https://czafashions.com/checkout.html?payment=failed").strip()
+WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip()
+WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+WHATSAPP_ADMIN_NUMBER = os.getenv("WHATSAPP_ADMIN_NUMBER", "256746803321").strip()
+WHATSAPP_API_BASE_URL = os.getenv("WHATSAPP_API_BASE_URL", "https://graph.facebook.com/v20.0").strip()
 
 
 def ensure_json(path: Path, default):
@@ -140,6 +144,98 @@ def normalize_phone_number(phone_number):
     if value.startswith("+"):
         return value[1:]
     return value
+
+
+def normalize_whatsapp_number(phone_number):
+    if not phone_number:
+        return ""
+
+    digits = "".join(ch for ch in str(phone_number) if ch.isdigit())
+    if not digits:
+        return ""
+
+    if digits.startswith("256"):
+        return digits
+
+    if digits.startswith("0"):
+        return f"256{digits[1:]}"
+
+    return digits
+
+
+def build_whatsapp_order_message(order):
+    items = order.get("items") or []
+    item_lines = []
+    for item in items:
+        item_name = str(item.get("name") or "Item").strip()
+        qty = int(item.get("qty") or 1)
+        item_price = float(item.get("price") or 0)
+        item_lines.append(f"- {item_name} x{qty} ({item_price * qty})")
+
+    delivery_address = order.get("deliveryAddress") or order.get("delivery_address") or "Not provided"
+    delivery_city = order.get("deliveryCity") or order.get("delivery_city") or "Not provided"
+    delivery_country = order.get("deliveryCountry") or order.get("delivery_country") or "Not provided"
+    phone_number = order.get("customerPhone") or order.get("customer_phone") or "Not provided"
+    customer_name = order.get("customerName") or order.get("customer_name") or "Customer"
+
+    item_section = item_lines if item_lines else ["No items listed"]
+
+    lines = [
+        "New order received from CZA Store.",
+        "",
+        f"Customer: {customer_name}",
+        f"Phone: {phone_number}",
+        f"Email: {order.get('customerEmail') or 'Not provided'}",
+        f"Delivery address: {delivery_address}",
+        f"City: {delivery_city}",
+        f"Country: {delivery_country}",
+        f"Delivery notes: {order.get('deliveryNotes') or order.get('delivery_notes') or 'None'}",
+        "",
+        "Items:",
+    ]
+    lines.extend(item_section)
+    lines.extend([
+        "",
+        f"Total: {order.get('currency', 'UGX')} {order.get('total', 0)}",
+        f"Order ID: {order.get('id', 'N/A')}",
+        f"Confirmation link: {order.get('confirmationLink') or 'Not provided'}",
+    ])
+    return "\n".join(lines)
+
+
+def send_whatsapp_order_notification(order):
+    if not WHATSAPP_ACCESS_TOKEN or not WHATSAPP_PHONE_NUMBER_ID:
+        return {"sent": False, "reason": "WhatsApp credentials are not configured."}
+
+    admin_number = normalize_whatsapp_number(WHATSAPP_ADMIN_NUMBER)
+    if not admin_number:
+        return {"sent": False, "reason": "WhatsApp admin number is missing."}
+
+    message = build_whatsapp_order_message(order)
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": admin_number,
+        "type": "text",
+        "text": {"body": message},
+    }
+
+    try:
+        request = Request(
+            f"{WHATSAPP_API_BASE_URL}/{WHATSAPP_PHONE_NUMBER_ID}/messages",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+
+        with urlopen(request, timeout=20) as response:
+            response_body = response.read().decode("utf-8", errors="ignore")
+            return {"sent": True, "response": response_body}
+    except Exception as exc:
+        return {"sent": False, "error": str(exc)}
 
 
 def is_makypay_configured():
@@ -648,6 +744,8 @@ def build_jjuma_payment_payload(order_payload):
         "customer_name": customer_name,
         "customer_email": order_payload.get("customerEmail") or order_payload.get("customer_email") or "",
         "customer_phone": order_payload.get("customerPhone") or order_payload.get("customer_phone") or "",
+        "customer_address": order_payload.get("deliveryAddress") or "",
+        "payment_method": payment_method,
         "redirect_url": JJUMA_SUCCESS_URL,
         "return_url": JJUMA_SUCCESS_URL,
         "cancel_redirect_url": JJUMA_CANCEL_URL,
@@ -819,7 +917,9 @@ class AppHandler(SimpleHTTPRequestHandler):
             payload = self.read_json_body()
             if isinstance(payload, list):
                 save_orders(payload)
-                self.send_json({"ok": True, "count": len(payload)})
+                latest_order = payload[0] if payload else None
+                whatsapp_result = send_whatsapp_order_notification(latest_order) if isinstance(latest_order, dict) else {"sent": False, "reason": "No order payload available."}
+                self.send_json({"ok": True, "count": len(payload), "whatsapp": whatsapp_result})
                 return
 
             self.send_json({"ok": False, "error": "Expected a JSON array."}, status=400)

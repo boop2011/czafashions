@@ -99,7 +99,6 @@ const STORAGE_KEYS = {
 };
 
 const defaultAdminPasswordHash = "ce258a4967db3acc31388ab7df7be18e1c8ff40164b104946550c9f69b413891";
-const ADMIN_WHATSAPP_NUMBER = "256746803321";
 
 async function hashCredential(value) {
   const bytes = new TextEncoder().encode(value);
@@ -774,57 +773,6 @@ function buildConfirmationLink(orderId) {
   return `${baseUrl}${window.location.pathname.replace(/\/[^/]*$/, "/") || "/"}?order=${orderId}`;
 }
 
-function normalizeWhatsAppNumber(value) {
-  const digits = String(value || "").replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.startsWith("256")) return digits;
-  if (digits.startsWith("0")) return `256${digits.slice(1)}`;
-  return digits;
-}
-
-function buildWhatsAppOrderMessage(order) {
-  const itemsSummary = order.items
-    .map((item) => `${item.name} x${item.qty} - ${formatMoney(item.price * item.qty, order.currency || getCurrency())}`)
-    .join("\n");
-
-  return [
-    "New order received from CZA Store.",
-    "",
-    `Customer: ${order.customerName}`,
-    `Phone: ${order.customerPhone || "Not provided"}`,
-    `Email: ${order.customerEmail || "Not provided"}`,
-    `Delivery Address: ${order.deliveryAddress || "Not provided"}`,
-    `City: ${order.deliveryCity || "Not provided"}`,
-    `Region: ${order.deliveryRegion || "Not provided"}`,
-    `Country: ${order.deliveryCountry || "Not provided"}`,
-    `Delivery Notes: ${order.deliveryNotes || "None"}`,
-    "",
-    "Items:",
-    itemsSummary || "No items listed",
-    "",
-    `Total: ${formatMoney(order.total, order.currency || getCurrency())}`,
-    `Order ID: ${order.id}`,
-    `Confirmation Link: ${order.confirmationLink || buildConfirmationLink(order.id)}`,
-  ].join("\n");
-}
-
-function sendOrderToWhatsApp(order) {
-  const whatsappNumber = normalizeWhatsAppNumber(ADMIN_WHATSAPP_NUMBER);
-  if (!whatsappNumber) return;
-
-  const message = encodeURIComponent(buildWhatsAppOrderMessage(order));
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
-
-  try {
-    const popup = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-    if (!popup) {
-      console.warn("WhatsApp popup was blocked. Falling back to a visible link.");
-    }
-  } catch (error) {
-    console.warn("Unable to open WhatsApp automatically:", error);
-  }
-}
-
 function notifyAdminOfOrder(order) {
   // Store notification in localStorage for dashboard
   const notification = {
@@ -855,9 +803,6 @@ function notifyAdminOfOrder(order) {
   }
   notifications.unshift(notification);
   localStorage.setItem("cza-payment-notifications", JSON.stringify(notifications.slice(0, 50))); // Keep last 50
-
-  // Send a pre-filled WhatsApp message to the admin number for every completed order.
-  sendOrderToWhatsApp(order);
 
   // Show browser notification to admin if logged in
   if ("Notification" in window && Notification.permission === "granted") {

@@ -1010,7 +1010,7 @@ async function initApp() {
     });
     const currencySetting = document.getElementById("currency-setting");
     if (currencySetting) currencySetting.value = getCurrency();
-    updateGatewayStatus();
+    initializeJjumaPayments();
     bindAccountSettings();
     setupAdminNotifications();
   } else if (privateAdminEntry && sessionStorage.getItem(STORAGE_KEYS.admin) === "true") {
